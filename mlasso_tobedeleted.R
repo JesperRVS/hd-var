@@ -19,14 +19,14 @@ mlasso <- function(x, y, lambda_glmnet, upsilon = NULL, tol_glmnet = 1e-4) {
     tol_glmnet <- 1e-4
   }
   # Options for glmnet
-  opts <- list(standardize = FALSE,    # don't standardize (normalization below)
+  opts <- list(standardize = FALSE,    # don't standardize (rescaling below)
                intercept = FALSE,      # don't fit an intercept
                lambda = lambda_glmnet, # penalty in eyes of glmnet
                thresh = tol_glmnet)    # tolerance for coordinate descent
   # Estimate
   that <- matrix(NA, p, qp)
   for (i in 1:p) {
-    xtilde <- sweep(x, 2, upsilon[i, ], FUN = "/")  # rescale
+    xtilde <- sweep(x, 2, upsilon[i, ], FUN = "/")  # rescale using loadings
     fit_i <- glmnet(xtilde, y[, i], family = "gaussian",
                     standardize = opts$standardize, intercept = opts$intercept,
                     lambda = opts$lambda, thresh = opts$thresh)

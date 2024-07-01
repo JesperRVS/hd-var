@@ -18,12 +18,13 @@ using(libest)
 
 # Simulate data
 source("simulations/design_A.R")
-n <- 10000
+n <- 1000
 p <- 4
 y0ton <- sim_data(n, p)
 
 # Estimate
-source("mlasso.R")
-lambda_glmnet <- 0.0001
-that <- mlasso(y0ton[-1, ], y0ton[-n, ], lambda_glmnet)
-print(that)
+source("lassoVAR.R")
+q <- 1 # autoregressive order
+fit_lasso <- lasso(y0ton, q = q, post = FALSE, intr = FALSE)
+
+fit_post <- lasso(y0ton, q = q, post = TRUE, intr = FALSE)
