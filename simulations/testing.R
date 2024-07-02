@@ -17,10 +17,12 @@ using <- function(...) {
 using(libest)
 
 # Simulate data
+seed <- 2345
+r <- 0
 source("simulations/design_A.R")
 n <- 1000
 p <- 4
-y0ton <- sim_data(n, p)
+y0ton <- sim_data(n, p, seed = seed, r = r)
 
 # Estimate
 source("lassoVAR.R")
@@ -28,3 +30,4 @@ q <- 1 # autoregressive order
 fit_lasso <- lasso(y0ton, q = q, post = FALSE, intr = FALSE)
 
 fit_post <- lasso(y0ton, q = q, post = TRUE, intr = FALSE)
+# fit_post_2 <- lasso(y0ton, q = q, gamma = p, post = TRUE, intr = TRUE)

@@ -1,7 +1,7 @@
 # Simulate data using Kock & Callot's [2015 J Economet] Experimental Design A
 # and retrieve coefficient matrix.
 
-sim_data <- function(n, p, seed = NULL, r = NULL) {
+sim_data <- function(n = 100, p = 4, seed = NULL, r = NULL) {
   # INPUTS:
   #   n:          Effective sample size, integer
   #   p:          System dimension, divisible by four
@@ -9,14 +9,7 @@ sim_data <- function(n, p, seed = NULL, r = NULL) {
   #   r:          MC iter
   # OUTPUT:
   #   y0ton:      (1+n) x p outcome matrix
-  if (missing(n) || missing(p)) {
-    stop("Not enough input arguments.")
-  }
-  if (!is.null(seed) && !is.null(r)) {
-    set.seed(seed + r)
-  } else {
-    set.seed(NULL)  # Reset RNG to default state
-  }
+  set.seed(seed + r)                        # set seed for reproducibility
   sigma_eps <- 0.1                          # std.dev of eps_0i [common]
   theta <- 0.5                              # AR(1) coef [common]
   sigma_y <- sigma_eps / sqrt(1 - theta^2)  # => std(y_0i) [common]
