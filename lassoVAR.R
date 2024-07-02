@@ -71,42 +71,43 @@ lasso <- function(data, q = 1, post = TRUE, intr = TRUE,
   # Initial step
   ups_init <- sqrt((1 / n) * t(y^2) %*% (x^2)) # loadings
   that_init <- mult_lasso(x, y, lambda_glmnet, ups_init, tol_glmnet) # estimates
-  if (post == TRUE) { # Post-selection refitting
-    sel <- that_init != 0 # flag active sets of predictors
-    intr_post <- NA # initialize
-    that_post <- matrix(NA, qp, 1) # initialize
-    for (i in 1:p) {
-      shat_i <-  sum(sel[i, ])
-      if (shat_i > 0) { # if something selected, refit
-        if (shat == rankMatrix(x[, sel[i, ]])[1]) { # if full rank...
-          xi <- x[, sel[i, ]] # selected regressors
-          sol <- solve(crossprod(xi), crossprod(xi, y[, i]))
-        } else { # if rank deficient...
+  # if (post == TRUE) { # Post-selection refitting
+  #   sel <- that_init != 0 # flag active sets of predictors
+  #   intr_post <- NA # initialize
+  #   that_post <- matrix(NA, qp, 1) # initialize
+    # for (i in 1:p) {
+    #   shat_i <-  sum(sel[i, ])
+    #   if (shat_i > 0) { # if something selected, refit
+    #     if (shat == rankMatrix(x[, sel[i, ]])[1]) { # if full rank...
+    #       xi <- x[, sel[i, ]] # selected regressors
+    #       sol <- solve(crossprod(xi), crossprod(xi, y[, i]))
+    #     } else { # if rank deficient...
 
-        }
-        if (intr == TRUE) {
-          xiaug <- cbind(1, x)
-          if (1 + shat_i == rankMatrix(xiaug)[1]) {
-            sol <- solve(crossprod(xiaug), crossprod(xiaug, y[, i]))
-          }
-        } else {
+    #     }
+    #     if (intr == TRUE) {
+    #       xiaug <- cbind(1, x)
+    #       if (1 + shat_i == rankMatrix(xiaug)[1]) {
+    #         sol <- solve(crossprod(xiaug), crossprod(xiaug, y[, i]))
+    #       }
+    #     }
+        # } else {
 
-        }
-        # if intercept requested, refit with intercept
+        # }
+        # # if intercept requested, refit with intercept
 
-        if (intr == TRUE) {
-          refit <- lm(y[, i] ~ 1 + x[, sel[i, ]])
-        } else { # otherwise, refit without intercept
-          refit <- lm(y[, i] ~ 0 + x[, sel[i, ]])
-        }
-        if (length(fit$coefficients) == fit$rank) { # if full rank
+        # if (intr == TRUE) {
+        #   refit <- lm(y[, i] ~ 1 + x[, sel[i, ]])
+        # } else { # otherwise, refit without intercept
+        #   refit <- lm(y[, i] ~ 0 + x[, sel[i, ]])
+        # }
+        # if (length(fit$coefficients) == fit$rank) { # if full rank
           
-        } else { # otherwise proceed
-          if (warn == TRUE) { # warn if refit fails
-            warning(paste("Refitting for equation " i " failed."))
-          }
-        }
-      }
+        # } else { # otherwise proceed
+        #   if (warn == TRUE) { # warn if refit fails
+        #     warning(paste("Refitting for equation " i " failed."))
+        #   }
+        # }
+      # }
         #   # Overwrite upon convergence; o/w keep as NA
         #   if (converged == TRUE) {
         #     intr_post[i] <- coef(refit)[1] # store intercept
@@ -130,15 +131,15 @@ lasso <- function(data, q = 1, post = TRUE, intr = TRUE,
         # # Solve R'Rb = X'y in two steps
         # xi <- x[, sel[i, ]] # selected predictors
         # that_init[i, sel[i, ]] <- solve(crossprod(xi), crossprod(xi, y[, i]))
-      }
-  } 
+      # }
+  # }
 
-  # Intercept estimates
-  if (intr == TRUE) {
-    constInit=Ybar'-ThatInit*Xbar'; % ...back them out
-  } else {
-    constInit=[];
-  }
+  # # Intercept estimates
+  # if (intr == TRUE) {
+  #   constInit=Ybar'-ThatInit*Xbar'; % ...back them out
+  # } else {
+  #   constInit=[];
+  # }
   fit <- list(
                 lambda = lambda_star,
                 ups_init = ups_init,
