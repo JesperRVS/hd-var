@@ -20,14 +20,25 @@ using(libest)
 seed <- 2345
 r <- 0
 source("simulations/design_A.R")
-n <- 1000
-p <- 4
+n <- 10
+p <- 12
 y0ton <- sim_data(n, p, seed = seed, r = r)
 
 # Estimate
 source("lassoVAR.R")
 q <- 1 # autoregressive order
 fit_lasso <- lasso(y0ton, q = q, post = FALSE, intr = FALSE)
-
-fit_post <- lasso(y0ton, q = q, post = TRUE, intr = FALSE)
+fit_lasso_intr <- lasso(y0ton, q = q, post = FALSE, intr = TRUE)
+fit_post <- lasso(y0ton, q = q, post = TRUE, intr = FALSE) # HERE HERE HERE
+fit_post_intr <- lasso(y0ton, q = q, post = TRUE, intr = TRUE)
 # fit_post_2 <- lasso(y0ton, q = q, gamma = p, post = TRUE, intr = TRUE)
+
+fit_ls <- lasso(y0ton, q = q, c = 0, post = FALSE, intr = FALSE)
+fit_ls_intr <- lasso(y0ton, q = q, c = 0, post = FALSE, intr = TRUE)
+fit_ls_post <- lasso(y0ton, q = q, c = 0, post = TRUE, intr = FALSE)
+fit_ls_post_intr <- lasso(y0ton, q = q, c = 0, post = TRUE, intr = TRUE)
+
+x <- y0ton[1:n, ]
+y <- y0ton[-1, ]
+
+ybar <- as.matrix(colMeans(y))
