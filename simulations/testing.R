@@ -4,7 +4,7 @@ invisible(gc()) #free up memory
 
 # Packages
 libest <- c("glmnet")
-libplt <- c("ggplot2") # c("formattable", "ggplot2", "latex2exp", "reshape", "stringr")
+libplt <- c("ggpubr", "reshape2", "latex2exp") # c("formattable", "latex2exp", "stringr")
 # Auto-installer (checks if installed - if not, installs and loads)
 using <- function(...) {
     libs <- unlist(list(...))
@@ -17,17 +17,100 @@ using <- function(...) {
 }
 using(append(libest, libplt))
 
-# Simulate data
+# SIMULATION
 seed <- 2345
 r <- 0
 source("simulations/design_A.R")
-n <- 100
-p <- 4
+n <- 500
+p <- 16
 y0ton <- sim_data(n, p, seed = seed, r = r)
 
-# Estimate
+# ESTIMATION
 source("lassoVAR.R")
 q <- 1 # autoregressive order
+fit_lasso <- lasso(y0ton, q = q, post = FALSE, intercept = FALSE,
+                   tol_ups = .Machine$double.eps)
+
+# PLOTTING
+# Illustrating convergence as a function of the number of updates (k) using LASSO
+rel_diffs_that <- matrix(NA, 15, 1)
+theta <- coef_matrix(p)
+errs_lasso_init <- fit_lasso$that_init - theta
+errs_lasso_refi <- sweep(fit_lasso$that_refi, c(1, 2), theta, "-")
+ell2_vec_errs_init <- sqrt(sum(errs_lasso_init^2))
+ell2_vec_errs_refi <- apply(errs_lasso_refi, 3, function(x) sqrt(sum(x^2)))
+ell2_vec_errs <- c(ell2_vec_errs_init, ell2_vec_errs_refi)
+for (l in 1:15) {
+    if (l == 1) {
+        that_old <- fit_lasso$that_init
+    } else {
+        that_old <- fit_lasso$that_refi[, , l - 1]
+    }
+    that_new <- fit_lasso$that_refi[, , l]
+    diff_that <- that_new - that_old
+    rel_diff_that <- sqrt(sum(diff_that^2)) /
+        (.Machine$double.eps + sqrt(sum(that_old^2)))
+    rel_diffs_that[l] <- rel_diff_that
+}
+# Create a single plot of the relative change in penalty loadings as a function
+# of the number of updates with the y-axis in percent
+df_ups <- data.frame(k = 1:15, rel_diffs_ups = fit_lasso$rel_diffs_ups)
+p_ups <- ggplot(data = df_ups, aes(x = k, y = rel_diffs_ups)) +
+    geom_line() +
+    geom_point() +
+    labs(x = TeX("Update $k$"), y = "",
+         title = TeX("(a) $\\frac{\\|vec(\\{\\widehat{\\upsilon}^{(k)}_{i,j}-\\widehat{\\upsilon}^{(k-1)}_{i,j}\\}_{(i,j)})\\|_{l_{2}}}{\\|vec(\\{\\widehat{\\upsilon}^{(k-1)}_{i,j}\\}_{(i,j)})\\|_{l_{2}}}$")
+    ) +
+    scale_x_continuous(breaks = c(1, 5, 10, 15)) +
+    scale_y_continuous(labels = scales::percent_format(scale = 100)) +
+    theme(plot.title = element_text(size = 10))
+# Create a single plot of the relative change in estimates as a function
+# of the number of updates with the y-axis in percent
+df_that <- data.frame(k = 1:15, rel_diffs_that = rel_diffs_that)
+p_that <- ggplot(data = df_that, aes(x = k, y = rel_diffs_that)) +
+    geom_line() +
+    geom_point() +
+    labs(x = TeX("Update $k$"), y = "",
+        title = TeX("(b) $\\frac{\\|vec(\\{\\widehat{\\beta}^{(k)}_{i,j}-\\widehat{\\beta}^{(k-1)}_{i,j}\\}_{(i,j)})\\|_{l_{2}}}{\\|vec(\\{\\widehat{\\beta}^{(k-1)}_{i,j}\\}_{(i,j)})\\|_{l_{2}}}$")
+         ) +
+    scale_x_continuous(breaks = c(1, 5, 10, 15)) +
+    scale_y_continuous(labels = scales::percent_format(scale = 100)) +
+    theme(plot.title = element_text(size = 10))
+# title = TeX("(b) $\\|vec(\\widehat{\\Theta}^{(k)}-\\widehat{\\Theta}^{(k-1)})\\|_{l_{2}}/\\|vec(\\widehat{\\Theta}^{(k-1)})\\|_{l_{2}}$")
+
+# Create a single plot of the ell_2 norm of vectorized errors as a function
+# of the number of updates
+df_errs <- data.frame(k = 0:15, ell2_vec_errs = ell2_vec_errs)
+p_errs <- ggplot(data = df_errs, aes(x = k, y = ell2_vec_errs)) +
+    geom_line() +
+    geom_point() +
+    labs(x = TeX("Update $k$"), y = "",
+         title = TeX("(c) $\\|vec(\\{\\widehat{\\beta}^{(k)}_{i,j}-\\beta_{0i,j}\\}_{(i,j)})\\|_{l_{2}}$")
+         ) +
+    scale_x_continuous(breaks = c(0, 1, 5, 10, 15)) +
+    scale_y_continuous(breaks = seq(.75, 1, by = .05)) +
+    theme(plot.title = element_text(size = 10))
+ggarrange(p_ups, p_that, p_errs, nrow = 1)
+ggsave("Figure_lasso_convergence_updating.pdf", width = 8, height = 3, units = "in", dpi = 300)
+
+
+
+# time <- 1:(1 + n)
+# df <- melt(data.frame(cbind(y0ton, time)), id.vars = "time")
+# ggplot(data = df, aes(x = time, y = value, color = variable)) +
+#     geom_line() +
+#     labs(x = "Time", y = "Value", title = "Time series plot of all variables")
+
+# ggplot(data = data.frame(x = 1:(1 + n), y = y0ton[, 1]), aes(x = x, y = y)) +
+#     geom_line() +
+#     labs(x = "Time", y = "Value", title = "Time series plot of first variable")
+# ggplot(data = data.frame(x = 1:(1 + n), y = y0ton), aes(x = x, y = y)) +
+#     geom_line() +
+#     labs(x = "Time", y = "Value", title = "Time series plot of second variable")
+
+
+
+
 fit_lasso <- lasso(y0ton, q = q, post = FALSE, intercept = FALSE)
 refit <- mult_refit(y0ton[1:n, ], y0ton[-1, ], that = fit_lasso$that_init)
 
@@ -52,9 +135,163 @@ b <- rev(a)
 #array of data
 ab <- array(c(a,b), dim = c(3,3,2))
 
-# Plotting
+# PLOTTING
 
-# Illustrating penalty loading convergence
+# Illustrating penalty loading convergence as a function of the number of
+# updates Lasso w/ Lasso loading updates w/ impossible tolerance (iteration
+# reaches limit K=15)
+fit_lasso <- lasso(y0ton, q = q, post = FALSE, intercept = FALSE,
+                   tol_ups = .Machine$double.eps)
+rel_diffs_that <- matrix(NA, 15, 1)
+theta <- coef_matrix(p)
+errs_lasso <- sweep(fit_lasso$that_refi, c(1, 2), theta, "-")
+ell2_vec_errs <- apply(errs_lasso, 3, function(x) sqrt(sum(x^2)))
+for (l in 1:15) {
+    if (l == 1) {
+        that_old <- fit_lasso$that_init
+    } else {
+        that_old <- fit_lasso$that_refi[, , l - 1]
+    }
+    that_new <- fit_lasso$that_refi[, , l]
+    diff_that <- that_new - that_old
+    rel_diff_that <- sqrt(sum(diff_that^2)) /
+        (.Machine$double.eps + sqrt(sum(that_old^2)))
+    rel_diffs_that[l] <- rel_diff_that
+}
+# df <- data.frame(k = 1:15, rel_diffs_ups = fit_lasso$rel_diffs_ups,
+#     rel_diffs_that = rel_diffs_that, ell2_vec_errs = ell2_vec_errs)
+
+# Gather these three plots side by side using ggplot2
+library(ggpubr)
+
+
+grid.arrange(p_ups, p_that, p_errs, nrow = 1)
+
+
+
+ggplot(data = df, aes(x = k, y = value, color = variable)) +
+    geom_line() +
+    geom_point() +
+    labs(x = "Number of updates, k", y = "",
+         title = "LASSO: Relative change in penalty loadings and estimates"
+    ) +
+    scale_x_continuous(breaks = c(1, 5, 10, 15))
+
+
+
+
+# Plotting ell_2 norm of vectorized errors as function of updates
+df <- data.frame(k = 1:15, ell2_vec_errs = ell2_vec_errs)
+df <- melt(df, id.vars = "k")
+ggplot(data = df, aes(x = k, y = value)) +
+    geom_line() +
+    geom_point() +
+    labs(x = "Number of updates, k", y = "ell_2 norm of vectorized errors",
+         title = "LASSO: ell_2 norm of vectorized errors"
+    ) +
+    scale_x_continuous(breaks = c(1, 5, 10, 15))
+
+
+
+
+
+
+
+# Create a plot with three panels side-by-side (1 row, 3 columns) with the
+# following:
+# 1. The relative change in penalty loadings as a function of the number of
+#    updates
+# 2. The relative change in estimates as a function of the number of updates
+# 3. The ell_2 norm of vectorized errors as a function of the number of updates
+
+
+
+ggplot(data = df, aes(x = k, y = value, color = variable)) +
+    geom_line() +
+    geom_point() +
+    facet_wrap(~variable, scales = "free_y") +
+    labs(x = "Number of updates, k", y = "",
+         title = "LASSO: Relative change in penalty loadings and estimates"
+    ) +
+    scale_x_continuous(breaks = c(1, 5, 10, 15))
+# provide code to format the first two panels as percentages with the third
+# panel remaining a decimal number
+
+
+
+
+
+
+
+# Plot the ell_2 norm of vectorized errors as a function of the number of updates
+# and the relative change in penalty loadings and estimates, respectively, as function of updates
+# with the relative change on a primary y-axis and the ell_2 norm of vectorized errors on a secondary y-axis
+
+
+
+
+
+
+
+df <- data.frame(k = 1:15, rel_diffs_ups = fit_lasso$rel_diffs_ups,
+    rel_diffs_that = rel_diffs_that)
+df <- melt(df, id.vars = "k")
+ggplot(data = df, aes(x = k, y = value, color = variable)) +
+    geom_line() +
+    geom_point() +
+    labs(x = "Number of updates, k", y = "Relative change",
+         title = "LASSO: Relative change in penalty loadings and estimates"
+    ) +
+    scale_x_continuous(breaks = c(1, 5, 10, 15))
+
+df <- data.frame(k = 1:fit_lasso$k_term,
+                 rel_diffs_ups = fit_lasso$rel_diffs_ups)
+ggplot(data = df, aes(x = k, y = rel_diffs_ups)) +
+  geom_line() +
+  geom_point() +
+  geom_hline(yintercept = 1e-3, linetype = "dashed", color = "red") +
+  labs(x = "Number of updates, k",
+    y = "Relative change in penalty loadings (vectorized ell_2 norm)",
+    title = "LASSO: Relative change in penalty loadings",
+    xlabel = 1:fit_lasso$k_term
+  ) +
+  scale_x_continuous(breaks = c(1, 5, 10, 15)) +
+  scale_y_continuous(labels = scales::percent_format(scale = 100))
+
+mat <- matrix(rep(1, 6), nrow = 2, ncol = 3)
+
+
+# Illustrating penalty loadings convergence as a function of the number of updates
+df <- data.frame(k = 1:fit_lasso$k_term,
+    thats = t(apply(fit_lasso$that_refi, 3, diag)))
+df <- melt(df, id.vars = "k")
+ggplot(data = df, aes(x = k, y = value, color = variable)) +
+  geom_line() +
+  geom_point() +
+  labs(x = "Number of updates, k", y = "Penalty Loadings",
+    title = "LASSO: Estimate convergence (diagonal entries)"
+  )
+
+# Illustrating estimate convergence as a function of the number of updates
+df <- data.frame(k = 1:fit_lasso$k_term, thats = t(apply(fit_lasso$that_refi, 3, diag)))
+df <- melt(df, id.vars = "k")
+ggplot(data = df, aes(x = k, y = value, color = variable)) +
+    geom_line() +
+    geom_point() +
+    labs(x = "Number of updates, k", y = "Estimate",
+         title = "LASSO: Estimate convergence (diagonal entries)"
+    )
+    
+# ggplot(data = df, aes(x = k, y = value)) +
+#     geom_line() +
+#     labs(x = "Number of updates, k", y = "Estimate of the first penalty loading",
+#          title = "LASSO: Estimate convergence (entry [1,1])"
+#     )
+    
+
+
+
+
 plot(1:fit_lasso$k_term, fit_lasso$rel_diffs_ups, type = "l",
     xlab = "Number of updates, k", ylab = "Relative change in penalty loadings (vectorized ell_2 norm)",
     main = "LASSO: Relative change in penalty loadings"

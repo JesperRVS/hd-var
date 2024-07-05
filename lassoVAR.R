@@ -74,13 +74,13 @@ lasso <- function(data, q = 1, post = TRUE, intercept = TRUE,
   for (l in 1:k) {                      # start updating
     if (l == 1) {                       # if first iteration...
       that_old <- that_init             # use initial estimates
-    } else {                            
+    } else {
       that_old <- that_refi[, , l - 1]  # o/w use previous (refined) estimates
     }
     res_old <- y - x %*% t(that_old) # implied residuals
     ups_new <- sqrt((1 / n) * t(res_old^2) %*% x^2) # update penalty loadings
     ups_refi[, , l] <- ups_new # store
-    that_new <- mult_lasso(x, y, lambda_glmnet, ups_new, tol_glmnet) # update estimates
+    that_new <- mult_lasso(x, y, lambda_glmnet, ups_new, tol_glmnet) # estimates
     if (post == TRUE) {                           # if refitting requested...
       refit <- mult_refit(x, y, that_new)         # refit estimates
       that_new <- refit$that                      # overwrite (keeping zeros)
@@ -91,19 +91,20 @@ lasso <- function(data, q = 1, post = TRUE, intercept = TRUE,
       intr_refi[, l] <- ybar - that_new %*% xbar  # back them out
     }
     if (l == 1) {           # if at first update...
-      ups_old <- ups_init   # then compare with initial penalty loadings
-    } else {                # o/w compare with previous (refined) penalty loadings
+      ups_old <- ups_init   # then compare w/ initial penalty loadings
+    } else {                # o/w compare w/ previous (refined) penalty loadings
       ups_old <- ups_refi[, , l - 1]
     }
     diff_ups <- ups_new - ups_old # change in penalty loadings
+    # relative change in vectorized ell_2 norm --v
     rel_diff_ups <- sqrt(sum(diff_ups^2)) /
-      (.Machine$double.eps + sqrt(sum(ups_old^2))) # relative change
+      (.Machine$double.eps + sqrt(sum(ups_old^2)))
     rel_diffs_ups[l, 1] <- rel_diff_ups # store
     if (rel_diff_ups <= tol_ups) {  # if change is small enough...
       break                         # stop updating
     }
   }
-  ups <- ups_refi[, , l]    # report final penalty loadings  
+  ups <- ups_refi[, , l]    # report final penalty loadings
   if (intercept == TRUE) {  # if intercepts requested...
     intr <- intr_refi[, l]  # report final intercepts
   } else {                  
