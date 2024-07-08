@@ -4,7 +4,8 @@ invisible(gc()) #free up memory
 
 # Packages
 libest <- c("glmnet")
-libplt <- c("ggpubr", "reshape2", "latex2exp") # c("formattable", "latex2exp", "stringr")
+libplt <- c("ggpubr", "reshape2", "latex2exp")
+# c("formattable", "latex2exp", "stringr")
 # Auto-installer (checks if installed - if not, installs and loads)
 using <- function(...) {
     libs <- unlist(list(...))
@@ -21,9 +22,16 @@ using(append(libest, libplt))
 seed <- 2345
 r <- 0
 source("simulations/design_A.R")
-n <- 100
+n <- 1000
 p <- 4
-y0ton <- sim_data(n, p, seed = seed, r = r)
+
+# eps <- sim_eps(n = n, p = p,
+#     family = "student", sigma_eps = 0.1, df = 3)
+
+
+y0ton <- sim_data(n, p, seed = seed, r = r, family = "gaussian", rho = .5)
+
+y0ton <- sim_data(n, p, seed = seed, r = r, family = "student", df = 3)
 
 # use ggplot to plot all p times in one figure with different colors
 time <- 1:(1 + n)
