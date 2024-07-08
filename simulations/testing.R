@@ -21,9 +21,64 @@ using(append(libest, libplt))
 seed <- 2345
 r <- 0
 source("simulations/design_A.R")
-n <- 500
-p <- 16
+n <- 100
+p <- 4
 y0ton <- sim_data(n, p, seed = seed, r = r)
+
+# use ggplot to plot all p times in one figure with different colors
+time <- 1:(1 + n)
+df <- melt(data.frame(cbind(y0ton, time)), id.vars = "time")
+ggplot(data = df, aes(x = time, y = value, color = variable)) +
+    geom_line() +
+    labs(x = "Time", y = "Value", title = "Time series plot of all variables")
+
+# ESTIMATION
+source("lassoVAR.R")
+q <- 1 # autoregressive order
+fit_lasso <- lasso(y0ton, q = q, post = FALSE, intercept = FALSE,
+                   tol_ups = .Machine$double.eps) # minimal tolerance
+fit_post <- lasso(y0ton, q = q, post = TRUE, intercept = FALSE,
+                  tol_ups = .Machine$double.eps) # minimal tolerance
+# ^-- here actually met b/c no change in selection
+
+
+
+
+rho <- .5
+sigma_eps <- 0.1
+cor_eps <- cor_mat(p, rho)       # innovation covariance matrix
+n_burn <- 10000
+n_tot <- 1 + n + n_burn                     # total no. of periods
+normals <- matrix(rnorm(n_tot * p), n_tot, p)
+eps <- sigma_eps * normals %*% chol(cor_eps)
+
+
+
+
+
+
+# y <- y0ton[2:(1 + n), ]
+# x <- y0ton[1:n, ]
+# source("lassoVAR.R")
+# lambda <- 0.001
+# library("rbenchmark")
+# benchmark("elementwise" = {
+#             lasso_elem <- mult_lasso(x, y, lambda_glmnet = lambda, full_path = FALSE)
+#           },
+#           "full_path" = {
+#             lasso_path <- mult_lasso(x, y, lambda_glmnet = lambda, full_path = TRUE)
+#           },
+#           replications = 1000, order = "relative", 
+#           columns = c("test", "replications", "elapsed", "relative")
+#           )
+
+# lasso_path <- mult_lasso(x, y, lambda_glmnet = lambda, full_path = TRUE)
+# lasso_elem <- mult_lasso(x, y, lambda_glmnet = lambda, full_path = FALSE)
+# lambda <- 0.001
+# lasso_elem <- glmnet(x, y, standardize = FALSE, intercept = FALSE)
+# lasso_coef <- coef(lasso_elem, s = lambda)[-1]
+
+# lasso_coef
 
 # ESTIMATION
 source("lassoVAR.R")
