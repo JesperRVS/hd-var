@@ -21,17 +21,31 @@ using(append(libest, libplt))
 # SIMULATION
 seed <- 2345
 r <- 0
-source("simulations/design_A.R")
+source("simulations/design_C.R")
 n <- 1000
 p <- 4
 
-# eps <- sim_eps(n = n, p = p,
-#     family = "student", sigma_eps = 0.1, df = 3)
+y0ton <- sim_data(n, p, seed = seed, r = r)
+
+ydata <- y0ton
 
 
-y0ton <- sim_data(n, p, seed = seed, r = r, family = "gaussian", rho = .5)
 
-y0ton <- sim_data(n, p, seed = seed, r = r, family = "student", df = 3)
+
+# ESTIMATION
+source("lassoVAR.R")
+q <- 1 # autoregressive order
+fit_lasso <- lasso(ydata, q = q, post = FALSE, intercept = FALSE,
+                   tol_ups = .Machine$double.eps) # minimal tolerance
+fit_postl <- lasso(ydata, q = q, post = TRUE, intercept = FALSE,
+                   tol_ups = .Machine$double.eps) # minimal tolerance
+# ^-- here actually met b/c no change in selection
+
+
+y0ton <- sim_data(n, p, seed = seed, r = r,
+    family = "gaussian", rho = .9)
+
+# y0ton <- sim_data(n, p, seed = seed, r = r, family = "student", df = 5)
 
 # use ggplot to plot all p times in one figure with different colors
 time <- 1:(1 + n)
@@ -40,14 +54,7 @@ ggplot(data = df, aes(x = time, y = value, color = variable)) +
     geom_line() +
     labs(x = "Time", y = "Value", title = "Time series plot of all variables")
 
-# ESTIMATION
-source("lassoVAR.R")
-q <- 1 # autoregressive order
-fit_lasso <- lasso(y0ton, q = q, post = FALSE, intercept = FALSE,
-                   tol_ups = .Machine$double.eps) # minimal tolerance
-fit_post <- lasso(y0ton, q = q, post = TRUE, intercept = FALSE,
-                  tol_ups = .Machine$double.eps) # minimal tolerance
-# ^-- here actually met b/c no change in selection
+
 
 
 
