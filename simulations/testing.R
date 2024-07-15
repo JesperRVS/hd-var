@@ -1,6 +1,11 @@
 ## TODO:
-# 0. Create AIC-Lasso, Post-AIC-Lasso, BIC-Lasso, Post-BIC-Lasso, Sqrt-Lasso,
-#    Post-Sqrt-Lasso functions
+# 0. Create following functions:
+    # [x] AIC-Lasso,
+    # [x] Post-AIC-Lasso,
+    # [x] BIC-Lasso,
+    # [x] Post-BIC-Lasso,
+    # Sqrt-Lasso,
+    # Post-Sqrt-Lasso
 # 1. Create main_sim file
 # 2. Use 5 designs (1) "Diagonal":     Design A as in KC2015 (2) "Correlated":
 #   Design A' w/ strongly correlated innovations (hence outcomes) (3)
@@ -36,15 +41,48 @@ using(append(libest, libplt))
 # SIMULATION
 seed <- 2345
 r <- 0
-source("simulations/design_C.R")
-n <- 1000
+source("simulations/design_A.R")
+n <- 100
 p <- 4
 
 y0ton <- sim_data(n, p, seed = seed, r = r)
 
 ydata <- y0ton
 
+# ESTIMATION VIA INFORMATION CRITERIA
+source("icLassoVAR.R")
+fit_ic <- ic_lasso_var(ydata, criteria = c("aic", "bic", "hqic"),
+    post = FALSE, intercept = FALSE)
+fit_ic_intr <- ic_lasso_var(ydata, criteria = c("aic", "bic", "hqic"),
+    post = FALSE, intercept = TRUE)
+fit_post_ic <- ic_lasso_var(ydata, criteria = c("aic", "bic", "hqic"),
+    post = TRUE, intercept = FALSE)
+fit_post_ic_intr <- ic_lasso_var(ydata, criteria = c("aic", "bic", "hqic"),
+    post = TRUE, intercept = TRUE)
 
+# ESTIMATION
+source("lassoVAR.R")
+fit_lasso <- lasso_var(ydata, q = 1, post = FALSE, intercept = FALSE)
+fit_postl <- lasso_var(ydata, q = 1, post = TRUE, intercept = FALSE)
+
+
+
+
+x <- ydata[1:n, ]
+y <- ydata[2:(1 + n), 1]
+
+source("icGlmnet.R")
+x <- ydata[1:n, ]
+y <- ydata[2:(1 + n), 2]
+fit_ic <- ic_glmnet(x, y, criteria = c("aic", "bic", "hqic"),
+    intercept = FALSE, standardize = FALSE)
+
+
+fit_aic <- ic_glmnet(x, y,
+    glmnet_options = list(standardize = FALSE, thresh = 1e-8),
+    criterion = "bic")
+
+fit <- glmnet(x, y, family = "gaussian", intercept = FALSE, standardize = FALSE)
 
 
 # ESTIMATION

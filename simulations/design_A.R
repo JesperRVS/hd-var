@@ -19,7 +19,7 @@ library("Matrix") # for triu and Diagonal
 #   nburn:      No. of burn-in periods
 # OUTPUT:
 #   y0ton:      (1 + n) x p outcome matrix (after burn-in)
-sim_data <- function(n = 100, p = 4, theta = 0.5,
+sim_data <- function(n = 100, p = 4,
                      family = "gaussian", sigma_eps = 0.1, rho = 0, df = 3,
                      seed = NULL, r = NULL, nburn = 10000) {
   set.seed(seed + r)                            # set seed for reproducibility
@@ -32,9 +32,9 @@ sim_data <- function(n = 100, p = 4, theta = 0.5,
   yinit <- matrix(0, p, 1)        # p x 1 initial values (zeros)
   ylong <- matrix(NA, p, n_tot)   # p x n_tot outcome matrix
   ylong[, 1] <- yinit             # initiate from all zeros
-  theta <- coef_matrix(theta, p)  # specify coef matrix (diagonal, sparse)
+  theta <- coef_mat(p)  # specify coef matrix (diagonal, sparse)
   for (t in 2:n_tot) {
-    ylong[, t] <- theta %*% ylong[, t - 1] + eps[, t] # VAR(1) process
+    ylong[, t] <- as.matrix(theta %*% ylong[, t - 1] + eps[, t])
   }
   y0ton <- t(ylong[, (nburn + 1):n_tot])  # (1 + n) x p after burn-in
   return(y0ton)
@@ -95,7 +95,8 @@ cor_mat <- function(p, rho) {
 #   p:          System dimension, integer
 # OUTPUT:
 #   theta:      p x p VAR(1) coefficient matrix (diagonal, sparse)
-coef_matrix <- function(theta, p) {
+coef_mat <- function(p) {
+  theta <- 0.5
   m <- Matrix::Diagonal(n = p, x = theta)
   return(m)
 }
