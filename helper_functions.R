@@ -46,6 +46,7 @@ ls_sol <- function(x, y) {
     sol <- solve(crossprod(x), crossprod(x, y))
   } else { # o/w produce solution based on pseudoinverse
     sol <- MASS::ginv(x) %*% y # ginv is Moore-Penrose pseudoinverse
+    # TODO: Consider using qr.solve for more robustness
   }
   fit <- list(sol = sol, full_rank = full_rank)
   return(fit)
@@ -135,7 +136,7 @@ mult_lasso <- function(x, y, lambda_glmnet, upsilon = NULL,
 #   y:          vector of response (n x 1)
 #   criteria:   character vector specifying the information criteria to use
 #               (default is c("aic", "bic", "hqic"))
-#  ...:         additional arguments to pass to glmnet
+#   ...:        additional arguments to pass to glmnet
 # OUTPUT: list with the following components:
 #   betas: matrix of betas, with columns named after the criteria
 #   lambdas: vector of lambdas that minimize each criterion
@@ -144,7 +145,7 @@ ic_lasso <- function(x, y, criteria = c("aic", "bic", "hqic"), ...) {
   # Fit the model using glmnet
   fit <- glmnet(x, y, family = "gaussian",
                 intercept = FALSE, standardize = FALSE, ...)
-  # Note: Intercept is handled via prior demeaning
+  # Note: Intercepts are handled via prior demeaning
   df <- fit$df                          # degrees of freedom w/o intercept
   n_crit <- length(criteria)            # num criteria
   intrs <- numeric(n_crit)              # placeholder intercepts
@@ -173,7 +174,133 @@ ic_lasso <- function(x, y, criteria = c("aic", "bic", "hqic"), ...) {
     lambda_ic <- fit$lambda[id_min]                 # minimizer
     beta <- as.matrix(coef(fit, s = lambda_ic)[-1]) # resulting slopes
     betas[, crit] <- beta           # store slopes
-    lambdas[crit] <- lambda_ic      # stor penalty (in eyes of glmnet)
+    lambdas[crit] <- lambda_ic      # store penalty (in eyes of glmnet)
   }
   return(list(betas = betas, lambdas = lambdas))
+}
+
+## == SQUARE-ROOT LASSO FUNCTIONS == ##
+sqrt_lasso <- function(x, y, lambda, max_iter = 10000,
+                       print_out = FALSE, opt_tol_norm = 1e-6) {
+  # This function computes the Square-Root Lasso estimator, which solves
+  #
+  # min_{beta}  sqrt( qhat(beta) ) + (lambda/n)*sum_j |beta_j|
+  #
+  # INPUTS:
+  #     x:            design matrix, n x p (w/o column of 1s)
+  #     y:            responses, n x 1
+  #     lambda:       penalty parameter, scalar
+  #     max_iter:     maximum number of iterations (default 10000)
+  #     print_out:    boolean, whether to print iter details (default FALSE)
+  #     opt_tol_norm: stopping tolerance for ||beta - beta_old|| (default 1e-6)
+  # OUTPUT:
+  #     beta:         square root LASSO estimates, p x 1
+  # Note: Intercept is handled separately via prior demeaning
+  n <- nrow(x)
+  p <- ncol(x)
+  ridge_matrix <- diag(lambda, p, p)
+  beta <- solve(crossprod(x) + ridge_matrix, crossprod(x, y))
+  if (print_out) {
+    cat(sprintf("%12s %16s %12s %17s %10s %10s\n", "Iter",
+                "sqrt(qhat(beta))", "||beta||_1", "||beta-beta_old||",
+                "primal", "dual"))
+  }
+  iter <- 0
+  xx <- crossprod(x) / n
+  xy <- crossprod(x, y) / n
+  xx_diag <- diag(xx)
+  x_beta <- x %*% beta
+  error <- y - x_beta
+  qhat <- sum(error^2) / n
+  while (iter < max_iter) {
+    iter <- iter + 1
+    beta_old <- beta
+    for (j in 1:p) {
+      s0 <- xx[j, ] %*% beta - xx_diag[j] * beta[j] - xy[j]
+      beta_j_old <- beta[j]
+      if (n^2 < (lambda^2) / xx_diag[j]) {
+        beta[j] <- 0
+      } else if (s0 > (lambda / n) * sqrt(qhat)) {
+        beta[j] <- ((lambda / sqrt(n^2 - lambda^2 / xx_diag[j])) *
+                    sqrt(max(qhat - (s0^2 / xx_diag[j]), 0)) - s0) / xx_diag[j]
+      } else if (s0 < -(lambda / n) * sqrt(qhat)) {
+        beta[j] <- (-(lambda / sqrt(n^2 - lambda^2 / xx_diag[j])) *
+                    sqrt(max(qhat - (s0^2 / xx_diag[j]), 0)) - s0) / xx_diag[j]
+      } else {
+        beta[j] <- 0
+      }
+      if (beta[j] != beta_j_old) {
+        x_beta <- x_beta + x[, j] * (beta[j] - beta_j_old)
+        error <- y - x_beta
+        qhat <- sum(error^2) / n
+      }
+    }
+    fobj <- sqrt(sum((x %*% beta - y)^2) / n) + (lambda / n) * sum(abs(beta))
+    error_norm <- norm(error, type = "2")
+    if (error_norm > 1.0e-10) {
+      aaa <- (sqrt(n) * error / error_norm)
+      dual <- (t(aaa) %*% y / n) - sum(abs(lambda / n - abs(crossprod(x, aaa) /
+                    n)) * abs(beta))
+    } else {
+      dual <- lambda * sum(abs(beta)) / n
+    }
+    if (print_out) {
+      cat(sprintf("%12d %12.2e %12.2e %12.2e %12.2e %12.2e\n",
+                  iter, sqrt(sum((x %*% beta - y)^2) / n),
+                  sum(abs(beta)), sum(abs(beta - beta_old)), fobj, dual))
+    }
+    if (sum(abs(beta - beta_old)) < opt_tol_norm) {
+      break
+      # if (fobj - dual < opt_tol_obj) {
+      #    break
+      # }
+    }
+  }
+  beta_sq <- beta
+  s_sq <- sum(abs(beta_sq) > 0)
+  if (print_out) {
+    cat(sprintf("Number of iterations: %d\n", iter))
+    cat(sprintf("Number of Nonzero components: %d\n", s_sq))
+    if (qhat > 1.0e-10) {
+      cat(sprintf("Maximal Dual violation: %15.2e (max relative: %5.2e)\n",
+                  max(0, max(abs(crossprod(x, aaa) / n - lambda / n))),
+                  max(0, max((abs(crossprod(x, aaa) / n - lambda / n)) /
+                             (lambda / n)))))
+    }
+  }
+  return(beta_sq)
+}
+
+# Function which calculates the equation-by-equation square-root LASSO estimates
+# for a VAR model, akin to mult_lasso
+# INPUTS:
+#   x:          n x pq matrix of predictors
+#   y:          n x p matrix of responses
+#   lambda:     penalty level (in eyes of sqrt_lasso)
+#   upsilon:    p x pq matrix of penalty loadings
+#   max_iter:   maximum number of iterations (default 10000)
+#   print_out:  boolean; if TRUE, print iteration details (default FALSE)
+#   opt_tol_norm: stopping tolerance for ||beta - beta_old|| (default 1e-6)
+# OUTPUT: p x pq matrix of estimates
+mult_sqrt_lasso <- function(x, y, lambda, upsilon = NULL,
+                            max_iter = 10000, print_out = FALSE,
+                            opt_tol_norm = 1e-6) {
+  if (missing(x) || missing(y) || missing(lambda)) {
+    stop("Not enough input arguments.")
+  }
+  pq <- ncol(x)  # columns in x = pq = total number of regressors
+  p <- ncol(y)   # q = autoregressive order, p = dim(output)
+  if (nrow(x) != nrow(y)) {
+    stop("Number of observations (rows in x and y) do not match.")
+  }
+  if (is.null(upsilon)) {
+    upsilon <- matrix(1, p, pq) # default to unit loadings
+  }
+  that <- matrix(NA, p, pq) # placeholder for estimates
+  for (i in 1:p) {  # use sqrt_lasso
+    xtilde <- sweep(x, 2, upsilon[i, ], FUN = "/")  # rescale using loadings
+    that_i_temp <- sqrt_lasso(xtilde, y[, i], lambda)
+    that[i, ] <- that_i_temp / upsilon[i, ]         # original scale
+  }
+  return(that) # return as matrix
 }

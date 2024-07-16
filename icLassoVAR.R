@@ -6,7 +6,7 @@ library("glmnet", "MASS", "Matrix")
 #   Matrix is used for rankMatrix
 source("helper_functions.R")  # for ic_lasso and refitting
 
-# Function to estimate LASSO VAR with information criteria selection
+# Function to estimate a VAR w/ LASSO and information criteria selection
 # INPUTS
 #   data:       (q + n) x p matrix of data (n = effective sample size)
 #   q:          autoregressive order; default is 1 (i.e. VAR(1) model)
@@ -53,16 +53,21 @@ ic_lasso_var <- function(data, q = 1, criteria = c("aic", "bic", "hqic"),
   }
   # Refit estimates for each information criterion
   if (post == TRUE) {
+    full_rank_post <- array(NA, dim = c(p, num_crit)) # rank check placeholder
+    dimnames(full_rank_post) <- list(1:p, criteria)
     for (crit in criteria) {
-      refit <- mult_refit(x, y, thats[, , crit])
-      thats[, , crit] <- refit$that # overwrite (keeping zeros)
+      refit <- mult_refit(x, y, thats[, , crit])  # refit selection
+      thats[, , crit] <- refit$that               # overwrite (keeping zeros)
+      refit
+      full_rank_post[, crit] <- refit$full_rank   # flag full rank
+    }
+  } else {
+    full_rank_post <- NULL
+  }
+  if (intercept == TRUE) {                    # if intercepts requested...
+    for (crit in criteria) {
+      intrs[, crit] <- ybar - thats[, , crit] %*% xbar # ... back them out
     }
   }
-  # If intercepts requested, back them out
-  if (intercept == TRUE) {
-    for (crit in criteria) {
-      intrs[, crit] <- ybar - thats[, , crit] %*% xbar
-    }
-  }
-  return(list(intrs = intrs, thats = thats))
+  return(list(intrs = intrs, thats = thats, full_rank_post = full_rank_post))
 }

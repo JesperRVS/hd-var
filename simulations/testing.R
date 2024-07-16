@@ -39,15 +39,44 @@ using <- function(...) {
 using(append(libest, libplt))
 
 # SIMULATION
+RNGkind(normal.kind = "Kinderman-Ramage") # faster normal draws (will do many)
 seed <- 2345
 r <- 0
 source("simulations/design_A.R")
-n <- 100
+n <- 1000
 p <- 4
 
 y0ton <- sim_data(n, p, seed = seed, r = r)
 
 ydata <- y0ton
+
+# ESTIMATION VIA SQRT-LASSO
+source("helper_functions.R")
+x <- ydata[1:n, ]
+y <- ydata[2:(1 + n), ]
+c <- 1.1
+gamma <- 0.1 / log(max(c(n, p)))
+lambda_star <- c * sqrt(n) * qnorm(1 - gamma / (2 * p^2))
+upsilon <- matrix(sqrt(colMeans(x^2)), nrow = p, ncol = ncol(x))
+thats_sqrt_lasso <- mult_sqrt_lasso(x, y, lambda = lambda_star, upsilon = upsilon,
+    print_out = TRUE, max_iter = 100)
+
+
+## OLD BELOW THIS LINE ##
+
+# ESTIMATION VIA SQUARE-ROOT LASSO
+source("helper_functions.R")
+x <- ydata[1:n, ]
+y <- ydata[2:(1 + n), 1]
+c <- 1.1
+gamma <- 0.1 / log(max(c(n, p)))
+lambda_star <- c * sqrt(n) * qnorm(1 - gamma / (2 * p^2))
+upsilon <- sqrt(colMeans(x^2))
+# upsilon <- rep(1, p)
+xtilde <- sweep(x, 2, upsilon, FUN = "/")
+that_sqrt <- sqrt_lasso(xtilde, y, lambda = lambda_star, print_out = TRUE, max_iter = 100) / upsilon
+
+that_sqrt_naive <- sqrt_lasso(x, y, lambda = lambda_star, print_out = TRUE, max_iter = 100)
 
 # ESTIMATION VIA INFORMATION CRITERIA
 source("icLassoVAR.R")
