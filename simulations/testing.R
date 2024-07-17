@@ -53,9 +53,9 @@ ydata <- y0ton
 # ESTIMATION VIA SQRT-LASSO
 q <- 1
 source("sqrtLassoVAR.R")
-fit_sqrtl_naive <- sqrt_lasso_var(ydata, q = q, post = FALSE, intercept = FALSE)
+fit_sqrt_lasso_naive <- sqrt_lasso_var(ydata, q = q, post = FALSE, intercept = FALSE)
 x <- ydata[1:n, ]
-fit_sqrtl <- sqrt_lasso_var(ydata, q = q, post = FALSE, intercept = FALSE,
+fit_sqrt_lasso <- sqrt_lasso_var(ydata, q = q, post = FALSE, intercept = FALSE,
     upsilon = matrix(sqrt(colMeans(x^2)), nrow = p, ncol = p * q))
 fit_post_sqrt_lasso <- sqrt_lasso_var(ydata, q = q, post = TRUE, intercept = FALSE,
     upsilon = matrix(sqrt(colMeans(x^2)), nrow = p, ncol = p * q))
