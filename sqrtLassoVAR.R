@@ -22,10 +22,6 @@
 #' which combines L1 penalization with a square-root transformation. The estimation procedure
 #' includes options to include intercepts, specify penalty levels, and tune convergence criteria.
 #'
-#' @references
-#' Yuan, M., & Lin, Y. (2007). Model selection and estimation in the Gaussian graphical model.
-#' Biometrika, 94(1), 19-35.
-#'
 #' @seealso \code{\link{mult_sqrt_lasso}}, \code{\link{mult_refit}}, \code{\link{sweep}}
 #'
 #' @importFrom MASS ginv
@@ -99,7 +95,7 @@ sqrt_lasso_var <- function(data, q = 1, post = TRUE, intercept = TRUE,
   return(list(intr = intr, that = that, full_rank_post = full_rank_post))
 }
 
-
+## OLD BELOW ##
 # ## Dependencies
 # library("MASS", "Matrix")
 # # Notes:
