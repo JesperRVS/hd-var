@@ -52,7 +52,7 @@ ic_lasso_var <- function(data, q = 1, criteria = c("aic", "bic", "hqic"),
     thats[i, , ] <- fit_ic$betas # store slopes
   }
   # Refit estimates for each information criterion
-  if (post == TRUE) {
+  if (post) {
     full_rank_post <- array(NA, dim = c(p, num_crit)) # rank check placeholder
     dimnames(full_rank_post) <- list(1:p, criteria)
     for (crit in criteria) {
@@ -64,7 +64,7 @@ ic_lasso_var <- function(data, q = 1, criteria = c("aic", "bic", "hqic"),
   } else {
     full_rank_post <- NULL
   }
-  if (intercept == TRUE) {                    # if intercepts requested...
+  if (intercept) {                            # if intercepts requested...
     for (crit in criteria) {
       intrs[, crit] <- ybar - thats[, , crit] %*% xbar # ... back them out
     }
