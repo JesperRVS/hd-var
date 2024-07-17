@@ -52,8 +52,11 @@ ydata <- y0ton
 
 # ESTIMATION VIA SQRT-LASSO
 source("helper_functions.R")
-x <- ydata[1:n, ]
-y <- ydata[2:(1 + n), ]
+# x <- ydata[1:n, ]
+# y <- ydata[2:(1 + n), ]
+xy <- unpack(ydata, q = 1)
+x <- xy$x
+y <- xy$y
 c <- 1.1
 gamma <- 0.1 / log(max(c(n, p)))
 lambda_star <- c * sqrt(n) * qnorm(1 - gamma / (2 * p^2))
@@ -63,6 +66,10 @@ thats_sqrt_lasso <- mult_sqrt_lasso(x, y, lambda = lambda_star,
     upsilon = upsilon)
 # thats_sqrt_lasso <- mult_sqrt_lasso(x, y, lambda = lambda_star,
 #     upsilon = upsilon, print_out = FALSE, max_iter = 100)
+
+x <- ydata[1:n, ]
+y <- ydata[2:(1 + n), 1]
+sqrt_lasso(x, y, lambda = lambda_star)
 
 ## OLD BELOW THIS LINE ##
 
