@@ -6,30 +6,75 @@ library("glmnet", "MASS", "Matrix")
 #   Matrix is used for rankMatrix
 
 ## == DATA PROCESSING FUNCTIONS == ##
-# Unpack data and construct predictors and response
-# INPUTS
-#   data:   (q + n) x p matrix of data (n = effective sample size)
-#   q:      autoregressive order; default is 1 (i.e. VAR(1) model)
-# OUTPUT: list with the following components:
-#   x:      n x pq matrix of predictors
-#   y:      n x p matrix of responses
+#' Unpacks time series data into predictors and response for VAR(q) model.
+#'
+#' @param data A (q + n) x p matrix of time series data, where n is the effective
+#'             sample size.
+#' @param q Autoregressive order; default is 1 (VAR(1) model).
+#'
+#' @return A list with the following components:
+#'   \item{x}{An n x pq matrix of predictors, where pq = p * q.}
+#'   \item{y}{An n x p matrix of responses.}
+#'
+#' @details
+#' The function extracts predictors and responses from time series data for
+#' fitting a VAR(q) model. It sets up lagged values of the data as predictors
+#' and the subsequent period's data as responses.
+#'
+#' @examples
+#' # Create example data
+#' data <- matrix(1:12, ncol = 3)
+#' # Unpack data assuming q = 1
+#' result <- unpack(data, q = 1)
+#' # Expected output for x and y
+#' expected_x <- matrix(c(1, 2, 3, 4, 2, 3, 4, 5, 3, 4, 5, 6), nrow = 4, byrow = TRUE)
+#' expected_y <- matrix(c(5, 6, 7, 8), nrow = 4, byrow = TRUE)
+#' # Check if the function output matches expected values
+#' identical(result$x, expected_x)  # Should return TRUE
+#' identical(result$y, expected_y)  # Should return TRUE
+#'
+#' @export
 unpack <- function(data, q = 1) {
   nplusq <- nrow(data)  # n plus q
-  p <- ncol(data)       # p = dim of output
+  p <- ncol(data)       # p = number of variables
   n <- nplusq - q       # n = effective sample size
   pq <- p * q           # pq = total number of variables
-  y <- data[(q + 1):(q + n), ]  # response
-  x <- matrix(NA, n, pq)        # predictors
+  y <- data[(q + 1):(q + n), ]  # responses
+  # Initialize x with NA for subsequent checks
+  x <- matrix(NA, n, pq)
+  # Fill x with lagged responses
   for (ell in 1:q) {
-    # where to store ellth lag --v
     block_ell <- ((ell - 1) * p + 1):(ell * p)
-    # periods corresponding to ellth lag --v
     lag_ell <- (q + 1 - ell):(q + n - ell)
-    # store 1st lags first, 2nd second,... --v
     x[, block_ell] <- data[lag_ell, ]
   }
   return(list(x = x, y = y))
 }
+
+# # Unpack data and construct predictors and response
+# # INPUTS
+# #   data:   (q + n) x p matrix of data (n = effective sample size)
+# #   q:      autoregressive order; default is 1 (i.e. VAR(1) model)
+# # OUTPUT: list with the following components:
+# #   x:      n x pq matrix of predictors
+# #   y:      n x p matrix of responses
+# unpack <- function(data, q = 1) {
+#   nplusq <- nrow(data)  # n plus q
+#   p <- ncol(data)       # p = dim of output
+#   n <- nplusq - q       # n = effective sample size
+#   pq <- p * q           # pq = total number of variables
+#   y <- data[(q + 1):(q + n), ]  # response
+#   x <- matrix(NA, n, pq)        # predictors
+#   for (ell in 1:q) {
+#     # where to store ellth lag --v
+#     block_ell <- ((ell - 1) * p + 1):(ell * p)
+#     # periods corresponding to ellth lag --v
+#     lag_ell <- (q + 1 - ell):(q + n - ell)
+#     # store 1st lags first, 2nd second,... --v
+#     x[, block_ell] <- data[lag_ell, ]
+#   }
+#   return(list(x = x, y = y))
+# }
 
 ## == LEAST SQUARES FUNCTIONS == ##
 
@@ -207,7 +252,7 @@ ic_lasso <- function(x, y, criteria = c("aic", "bic", "hqic"), ...) {
 #' lambda <- 0.1
 #' beta_estimates <- sqrt_lasso(x, y, lambda)
 #' @export
-sqrt_lasso <- function(x, y, lambda, max_iter = 100, opt_tol_norm = 1e-4) {
+sqrt_lasso <- function(x, y, lambda, max_iter = 100, rel_tol_norm = 1e-4) {
   # Compute necessary dimensions
   n <- nrow(x)
   p <- ncol(x)
@@ -215,6 +260,7 @@ sqrt_lasso <- function(x, y, lambda, max_iter = 100, opt_tol_norm = 1e-4) {
   ridge_matrix <- Matrix::Diagonal(p, x = lambda)
   beta <- solve(crossprod(x) + ridge_matrix, crossprod(x, y))
   beta <- as.matrix(beta)
+  print(beta)
   # Precompute quantities for the algorithm
   iter <- 0
   xx <- crossprod(x) / n
@@ -250,31 +296,59 @@ sqrt_lasso <- function(x, y, lambda, max_iter = 100, opt_tol_norm = 1e-4) {
         error <- y - x_beta
         qhat <- mean(error^2)
       }
+      print(beta)
     }
     # Check for convergence using the relative change in the Euclidean norm
     norm_diff <- norm(beta - beta_old, type = "2")          # numerator
     norm_beta_old <- norm(beta_old, type = "2") + epsilon   # denominator
-    if (norm_diff / norm_beta_old < opt_tol_norm) {         # check tolerance
+    if (norm_diff / norm_beta_old < rel_tol_norm) {         # check tolerance
       break                                                 # break if met
     }
   }
   return(beta)
 }
 
-# Function which calculates the equation-by-equation square-root LASSO estimates
-# for a VAR model, akin to mult_lasso
-# INPUTS:
-#   x:          n x pq matrix of predictors
-#   y:          n x p matrix of responses
-#   lambda:     penalty level (in eyes of sqrt_lasso)
-#   upsilon:    p x pq matrix of penalty loadings
-#   max_iter:   maximum number of iterations (default 10000)
-#   print_out:  boolean; if TRUE, print iteration details (default FALSE)
-#   opt_tol_norm: stopping tolerance for ||beta - beta_old|| (default 1e-6)
-# OUTPUT: p x pq matrix of estimates
+#' Estimate equation-by-equation square-root LASSO coefficients for VAR models.
+#'
+#' This function estimates coefficients for a Vector Autoregressive (VAR) model
+#' using the square-root LASSO method, where predictors are rescaled based on
+#' penalty loadings.
+#'
+#' @param x n x pq matrix of predictors.
+#' @param y n x p matrix of responses.
+#' @param lambda Penalty level for square-root LASSO regularization.
+#' @param upsilon p x pq matrix of penalty loadings. Each row corresponds to the
+#'        loadings for one equation in the VAR model. If NULL, defaults to unit
+#'        loadings.
+#' @param max_iter Maximum number of iterations for the square-root LASSO
+#'        algorithm. Default is 100.
+#' @param rel_tol_norm Stopping tolerance for ||beta - beta_old|| in the
+#'        square-root LASSO algorithm. Default is 1e-4.
+#'
+#' @return p x pq matrix of estimated coefficients for each equation in the VAR
+#'         model.
+#'
+#' @details
+#' - The function rescales predictors \code{x} using provided penalty loadings
+#'   \code{upsilon} before applying square-root LASSO estimation.
+#' - Each equation in the VAR model is estimated separately, iterating through
+#'   \code{p} equations.
+#' - Estimated coefficients are rescaled back to original scale using inverse of
+#'   \code{upsilon}.
+#' - Ensure \code{x} and \code{y} have same number of observations (rows).
+#'
+#' @examples
+#' # Example usage:
+#' x_data <- matrix(rnorm(100 * 6), 100, 6)
+#' y_data <- matrix(rnorm(100 * 2), 100, 2)
+#' lambda <- 0.1
+#' penalty_loadings <- matrix(runif(6), 2, 3)
+#' estimates <- mult_sqrt_lasso(x_data, y_data, lambda, upsilon = penalty_loadings)
+#'
+#' @export
 mult_sqrt_lasso <- function(x, y, lambda, upsilon = NULL,
-                            max_iter = 10000, print_out = FALSE,
-                            opt_tol_norm = 1e-6) {
+                            max_iter = 100, rel_tol_norm = 1e-4) {
+  # Check input validity
   if (missing(x) || missing(y) || missing(lambda)) {
     stop("Not enough input arguments.")
   }
@@ -286,13 +360,19 @@ mult_sqrt_lasso <- function(x, y, lambda, upsilon = NULL,
   if (is.null(upsilon)) {
     upsilon <- matrix(1, p, pq) # default to unit loadings
   }
+  if (nrow(upsilon) != p || ncol(upsilon) != pq) {
+    stop("Invalid dimensions for upsilon.")
+  }
   that <- matrix(NA, p, pq) # placeholder for estimates
-  for (i in 1:p) {  # use sqrt_lasso
-    xtilde <- sweep(x, 2, upsilon[i, ], FUN = "/")  # rescale using loadings
-    that_i_temp <- sqrt_lasso(xtilde, y[, i], lambda, 
+  for (i in 1:p) {
+    # Rescale x for the i-th equation
+    xtilde_i <- sweep(x, 2, upsilon[i, ], FUN = "/")
+    # Perform sqrt_lasso estimation with max_iter and rel_tol_norm
+    that_i_temp <- sqrt_lasso(xtilde_i, y[, i], lambda,
                               max_iter = max_iter,
-                              opt_tol_norm = opt_tol_norm)
-    that[i, ] <- that_i_temp / upsilon[i, ]         # original scale
+                              rel_tol_norm = rel_tol_norm)
+    # Store estimates back to original scale
+    that[i, ] <- that_i_temp / upsilon[i, ]
   }
   return(that) # return as matrix
 }
