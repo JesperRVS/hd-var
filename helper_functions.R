@@ -260,7 +260,6 @@ sqrt_lasso <- function(x, y, lambda, max_iter = 100, rel_tol_norm = 1e-4) {
   ridge_matrix <- Matrix::Diagonal(p, x = lambda)
   beta <- solve(crossprod(x) + ridge_matrix, crossprod(x, y))
   beta <- as.matrix(beta)
-  print(beta)
   # Precompute quantities for the algorithm
   iter <- 0
   xx <- crossprod(x) / n
@@ -296,7 +295,6 @@ sqrt_lasso <- function(x, y, lambda, max_iter = 100, rel_tol_norm = 1e-4) {
         error <- y - x_beta
         qhat <- mean(error^2)
       }
-      print(beta)
     }
     # Check for convergence using the relative change in the Euclidean norm
     norm_diff <- norm(beta - beta_old, type = "2")          # numerator
