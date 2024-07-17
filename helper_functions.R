@@ -46,7 +46,7 @@ ls_sol <- function(x, y) {
     sol <- solve(crossprod(x), crossprod(x, y))
   } else { # o/w produce solution based on pseudoinverse
     sol <- MASS::ginv(x) %*% y # ginv is Moore-Penrose pseudoinverse
-    # TODO: Consider using qr.solve for more robustness
+    # TODO: Find more clever way to handle rank-deficient case
   }
   fit <- list(sol = sol, full_rank = full_rank)
   return(fit)
@@ -180,41 +180,55 @@ ic_lasso <- function(x, y, criteria = c("aic", "bic", "hqic"), ...) {
 }
 
 ## == SQUARE-ROOT LASSO FUNCTIONS == ##
-sqrt_lasso <- function(x, y, lambda, max_iter = 10000,
-                       print_out = FALSE, opt_tol_norm = 1e-6) {
-  # This function computes the Square-Root Lasso estimator, which solves
-  #
-  # min_{beta}  sqrt( qhat(beta) ) + (lambda/n)*sum_j |beta_j|
-  #
-  # INPUTS:
-  #     x:            design matrix, n x p (w/o column of 1s)
-  #     y:            responses, n x 1
-  #     lambda:       penalty parameter, scalar
-  #     max_iter:     maximum number of iterations (default 10000)
-  #     print_out:    boolean, whether to print iter details (default FALSE)
-  #     opt_tol_norm: stopping tolerance for ||beta - beta_old|| (default 1e-6)
-  # OUTPUT:
-  #     beta:         square root LASSO estimates, p x 1
-  # Note: Intercept is handled separately via prior demeaning
+#' Square-Root Lasso Estimator
+#'
+#' This function computes the Square-Root Lasso estimator, which solves
+#' \deqn{min_{\beta}  \sqrt{qhat(\beta)} + \frac{\lambda}{n} \sum_{j} |\beta_{j}|} # nolint: line_length_linter.
+#'
+#' @param x Design matrix, n x p (without a column of 1s)
+#' @param y Response vector, n x 1
+#' @param lambda Penalty parameter, scalar
+#' @param max_iter Maximum number of iterations (default 100)
+#' @param opt_tol_norm Stopping tolerance for relative change in the Euclidean
+#' norm of \eqn{\beta} (default 1e-4)
+#' @return A vector of Square-Root Lasso estimates, p x 1
+#' @details The function iteratively updates the \eqn{\beta} estimates using a
+#' coordinate descent approach until the relative change in the Euclidean norm
+#' of \eqn{\beta} falls below the specified tolerance or the maximum number of
+#' iterations is reached.
+#' @note The intercept is handled separately via prior demeaning.
+#' @examples
+#' # Example usage:
+#' n <- 100
+#' p <- 10
+#' set.seed(42)
+#' x <- matrix(rnorm(n * p), n, p)
+#' y <- rnorm(n)
+#' lambda <- 0.1
+#' beta_estimates <- sqrt_lasso(x, y, lambda)
+#' @export
+sqrt_lasso <- function(x, y, lambda, max_iter = 100, opt_tol_norm = 1e-4) {
+  # Compute necessary dimensions
   n <- nrow(x)
   p <- ncol(x)
-  ridge_matrix <- diag(lambda, p, p)
+  # Ridge matrix for the initial beta estimate
+  ridge_matrix <- Matrix::Diagonal(p, x = lambda)
   beta <- solve(crossprod(x) + ridge_matrix, crossprod(x, y))
-  if (print_out) {
-    cat(sprintf("%12s %16s %12s %17s %10s %10s\n", "Iter",
-                "sqrt(qhat(beta))", "||beta||_1", "||beta-beta_old||",
-                "primal", "dual"))
-  }
+  beta <- as.matrix(beta)
+  # Precompute quantities for the algorithm
   iter <- 0
   xx <- crossprod(x) / n
   xy <- crossprod(x, y) / n
   xx_diag <- diag(xx)
   x_beta <- x %*% beta
   error <- y - x_beta
-  qhat <- sum(error^2) / n
+  qhat <- mean(error^2)
+  # Small constant to avoid division by zero
+  epsilon <- .Machine$double.eps
   while (iter < max_iter) {
     iter <- iter + 1
     beta_old <- beta
+    # Coordinate descent update for each beta_j
     for (j in 1:p) {
       s0 <- xx[j, ] %*% beta - xx_diag[j] * beta[j] - xy[j]
       beta_j_old <- beta[j]
@@ -222,53 +236,29 @@ sqrt_lasso <- function(x, y, lambda, max_iter = 10000,
         beta[j] <- 0
       } else if (s0 > (lambda / n) * sqrt(qhat)) {
         beta[j] <- ((lambda / sqrt(n^2 - lambda^2 / xx_diag[j])) *
-                    sqrt(max(qhat - (s0^2 / xx_diag[j]), 0)) - s0) / xx_diag[j]
+                      sqrt(max(qhat - (s0^2 / xx_diag[j]), 0)) - s0) /
+          xx_diag[j]
       } else if (s0 < -(lambda / n) * sqrt(qhat)) {
         beta[j] <- (-(lambda / sqrt(n^2 - lambda^2 / xx_diag[j])) *
-                    sqrt(max(qhat - (s0^2 / xx_diag[j]), 0)) - s0) / xx_diag[j]
+                      sqrt(max(qhat - (s0^2 / xx_diag[j]), 0)) - s0) /
+          xx_diag[j]
       } else {
         beta[j] <- 0
       }
-      if (beta[j] != beta_j_old) {
+      if (beta[j] != beta_j_old) { # Update mean-square error if change
         x_beta <- x_beta + x[, j] * (beta[j] - beta_j_old)
         error <- y - x_beta
-        qhat <- sum(error^2) / n
+        qhat <- mean(error^2)
       }
     }
-    fobj <- sqrt(sum((x %*% beta - y)^2) / n) + (lambda / n) * sum(abs(beta))
-    error_norm <- norm(error, type = "2")
-    if (error_norm > 1.0e-10) {
-      aaa <- (sqrt(n) * error / error_norm)
-      dual <- (t(aaa) %*% y / n) - sum(abs(lambda / n - abs(crossprod(x, aaa) /
-                    n)) * abs(beta))
-    } else {
-      dual <- lambda * sum(abs(beta)) / n
-    }
-    if (print_out) {
-      cat(sprintf("%12d %12.2e %12.2e %12.2e %12.2e %12.2e\n",
-                  iter, sqrt(sum((x %*% beta - y)^2) / n),
-                  sum(abs(beta)), sum(abs(beta - beta_old)), fobj, dual))
-    }
-    if (sum(abs(beta - beta_old)) < opt_tol_norm) {
-      break
-      # if (fobj - dual < opt_tol_obj) {
-      #    break
-      # }
+    # Check for convergence using the relative change in the Euclidean norm
+    norm_diff <- norm(beta - beta_old, type = "2")          # numerator
+    norm_beta_old <- norm(beta_old, type = "2") + epsilon   # denominator
+    if (norm_diff / norm_beta_old < opt_tol_norm) {         # check tolerance
+      break                                                 # break if met
     }
   }
-  beta_sq <- beta
-  s_sq <- sum(abs(beta_sq) > 0)
-  if (print_out) {
-    cat(sprintf("Number of iterations: %d\n", iter))
-    cat(sprintf("Number of Nonzero components: %d\n", s_sq))
-    if (qhat > 1.0e-10) {
-      cat(sprintf("Maximal Dual violation: %15.2e (max relative: %5.2e)\n",
-                  max(0, max(abs(crossprod(x, aaa) / n - lambda / n))),
-                  max(0, max((abs(crossprod(x, aaa) / n - lambda / n)) /
-                             (lambda / n)))))
-    }
-  }
-  return(beta_sq)
+  return(beta)
 }
 
 # Function which calculates the equation-by-equation square-root LASSO estimates
@@ -299,7 +289,9 @@ mult_sqrt_lasso <- function(x, y, lambda, upsilon = NULL,
   that <- matrix(NA, p, pq) # placeholder for estimates
   for (i in 1:p) {  # use sqrt_lasso
     xtilde <- sweep(x, 2, upsilon[i, ], FUN = "/")  # rescale using loadings
-    that_i_temp <- sqrt_lasso(xtilde, y[, i], lambda)
+    that_i_temp <- sqrt_lasso(xtilde, y[, i], lambda, 
+                              max_iter = max_iter,
+                              opt_tol_norm = opt_tol_norm)
     that[i, ] <- that_i_temp / upsilon[i, ]         # original scale
   }
   return(that) # return as matrix

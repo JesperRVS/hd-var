@@ -58,9 +58,11 @@ c <- 1.1
 gamma <- 0.1 / log(max(c(n, p)))
 lambda_star <- c * sqrt(n) * qnorm(1 - gamma / (2 * p^2))
 upsilon <- matrix(sqrt(colMeans(x^2)), nrow = p, ncol = ncol(x))
-thats_sqrt_lasso <- mult_sqrt_lasso(x, y, lambda = lambda_star, upsilon = upsilon,
-    print_out = TRUE, max_iter = 100)
-
+# upsilon <- matrix(1, nrow = p, ncol = ncol(x))
+thats_sqrt_lasso <- mult_sqrt_lasso(x, y, lambda = lambda_star,
+    upsilon = upsilon)
+# thats_sqrt_lasso <- mult_sqrt_lasso(x, y, lambda = lambda_star,
+#     upsilon = upsilon, print_out = FALSE, max_iter = 100)
 
 ## OLD BELOW THIS LINE ##
 
