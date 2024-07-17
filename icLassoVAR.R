@@ -1,5 +1,5 @@
 ## Dependencies
-library("glmnet", "MASS", "Matrix")
+# library("glmnet", "MASS", "Matrix")
 # Notes:
 #   glmnet is used for LASSO estimation
 #   MASS is used for Moore-Penrose pseudoinverse (ginv)
@@ -8,17 +8,18 @@ source("helper_functions.R")  # for ic_lasso and refitting
 
 # Function to estimate a VAR w/ LASSO and information criteria selection
 # INPUTS
-#   data:       (q + n) x p matrix of data (n = effective sample size)
-#   q:          autoregressive order; default is 1 (i.e. VAR(1) model)
-#   criteria:   information criteria to use; default is AIC, BIC and HQIC
-#   post:       logical; if TRUE, refit estimates after selection
-#   intercept:  logical; if TRUE, back out intercepts
-#   ...:        additional arguments to ic_lasso (passed on to glmnet)
-# OUTPUTs fit: list with the following components
-#   intrs:      p x num_crit matrix of intercepts
-#   thats:      p x pq x num_crit array of estimates
+#   data:           (q + n) x p matrix of data (n = effective sample size)
+#   q:              autoregressive order; default is 1 (i.e. VAR(1) model)
+#   criteria:       information criteria to use; default is AIC, BIC and HQIC
+#   post:           logical; if TRUE, refit estimates after selection
+#   intercept:      logical; if TRUE, back out intercepts
+#   upsilon:        p x pq matrix of loadings; default is unit loadings
+# OUTPUTs a list with the following components:
+#   intrs:          p x num_crit matrix of intercepts
+#   thats:          p x pq x num_crit array of estimates
+#   full_rank_post: p x num_crit matrix of full rank flags
 ic_lasso_var <- function(data, q = 1, criteria = c("aic", "bic", "hqic"),
-                         post = TRUE, intercept = TRUE, ...) {
+                         post = TRUE, intercept = TRUE, upsilon = NULL) {
   if (missing(data) || is.null(data)) {
     stop("No data provided.")
   }
@@ -30,9 +31,15 @@ ic_lasso_var <- function(data, q = 1, criteria = c("aic", "bic", "hqic"),
   xy <- unpack(data, q = q) # unpack data
   x <- xy$x                 # predictors
   y <- xy$y                 # responses
-  num_crit <- length(criteria) # num information criteria
+  num_crit <- length(criteria)  # num information criteria
+  if (is.null(upsilon)) {
+    upsilon <- matrix(1, p, pq) # default to unit loadings
+  }
+  if (nrow(upsilon) != p || ncol(upsilon) != pq) {
+    stop("Invalid dimensions for upsilon.")
+  }
   # if intercept requested, demean before proceeding
-  if (intercept == TRUE) {
+  if (intercept) {
     ybar <- colMeans(y)     # response means as p-dim array
     xbar <- colMeans(x)     # predictor means as pq-dim array
     y <- sweep(y, 2, ybar)  # demean responses
@@ -41,15 +48,17 @@ ic_lasso_var <- function(data, q = 1, criteria = c("aic", "bic", "hqic"),
     xbar <- as.matrix(xbar) # predictor means as pq x 1 matrix
     intrs <- array(NA, dim = c(p, num_crit)) # placeholder intercepts
     dimnames(intrs) <- list(1:p, criteria)
-  } else {
-    intrs <- NULL
   }
   # Note: Means are stored to back out intercepts later
   thats <- array(NA, dim = c(p, pq, num_crit))  # placeholder slopes
   dimnames(thats) <- list(1:p, 1:pq, criteria)
   for (i in 1:p) { # equation-by-equation information criteria LASSO
-    fit_ic <- ic_lasso(x, y[, i], criteria = criteria, ...)
-    thats[i, , ] <- fit_ic$betas # store slopes
+    upsilon_i <- upsilon[i, ] # ith row of upsilon
+    xtemp <- sweep(x, 2, upsilon_i, "/")              # scale predictors
+    fit_ic <- ic_lasso(xtemp, y[, i], criteria = criteria)
+    thats_i_temp <- fit_ic$betas                      # slopes on equal scale
+    thats_i <- sweep(thats_i_temp, 1, upsilon_i, "/") # and on original scale
+    thats[i, , ] <- thats_i
   }
   # Refit estimates for each information criterion
   if (post) {
@@ -58,7 +67,6 @@ ic_lasso_var <- function(data, q = 1, criteria = c("aic", "bic", "hqic"),
     for (crit in criteria) {
       refit <- mult_refit(x, y, thats[, , crit])  # refit selection
       thats[, , crit] <- refit$that               # overwrite (keeping zeros)
-      refit
       full_rank_post[, crit] <- refit$full_rank   # flag full rank
     }
   } else {
@@ -68,6 +76,8 @@ ic_lasso_var <- function(data, q = 1, criteria = c("aic", "bic", "hqic"),
     for (crit in criteria) {
       intrs[, crit] <- ybar - thats[, , crit] %*% xbar # ... back them out
     }
+  } else {
+    intrs <- NULL
   }
   return(list(intrs = intrs, thats = thats, full_rank_post = full_rank_post))
 }
