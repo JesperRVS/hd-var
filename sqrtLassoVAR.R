@@ -21,6 +21,9 @@
 #' This function estimates the coefficients of a VAR model using the square-root LASSO method,
 #' which combines L1 penalization with a square-root transformation. The estimation procedure
 #' includes options to include intercepts, specify penalty levels, and tune convergence criteria.
+#' @references
+#' Belloni, A., Chernozhukov, V., & Wang, L. (2011). Square-root lasso: Pivotal
+#' recovery of sparse signals via conic programming. Biometrika, 98(4), 791-806.
 #'
 #' @seealso \code{\link{mult_sqrt_lasso}}, \code{\link{mult_refit}}, \code{\link{sweep}}
 #'
@@ -74,9 +77,9 @@ sqrt_lasso_var <- function(data, q = 1, post = TRUE, intercept = TRUE,
   # ESTIMATE
   # Estimate the square-root LASSO VAR
   that <- mult_sqrt_lasso(x, y, lambda = lambda_star_sqrt,
-                                    upsilon = upsilon,
-                                    max_iter = max_iter, 
-                                    rel_tol_norm = rel_tol_norm)
+                          upsilon = upsilon,
+                          max_iter = max_iter, 
+                          rel_tol_norm = rel_tol_norm)
   # POST-PROCESS
   # If requested, refit estimates after selection
   if (post) {
