@@ -174,55 +174,166 @@ mult_lasso <- function(x, y, lambda_glmnet, upsilon = NULL,
 }
 
 ## == INFORMATION CRITERIA FUNCTIONS == ##
-
-# Function to calculate the information criterion using glmnet
-# INPUTS:
-#   x:          matrix of predictors (n x p)
-#   y:          vector of response (n x 1)
-#   criteria:   character vector specifying the information criteria to use
-#               (default is c("aic", "bic", "hqic"))
-#   ...:        additional arguments to pass to glmnet
-# OUTPUT: list with the following components:
-#   betas: matrix of betas, with columns named after the criteria
-#   lambdas: vector of lambdas that minimize each criterion
-ic_lasso <- function(x, y, criteria = c("aic", "bic", "hqic"), ...) {
+#' Compute Information Criteria for Lasso Regression using glmnet
+#'
+#' This function fits a Lasso regression model using glmnet and calculates
+#' information criteria (AIC, BIC, HQIC) to select the best model.
+#'
+#' @param x Matrix of predictors (n x p).
+#' @param y Vector of response (n x 1).
+#' @param criteria Character vector specifying the information criteria to use.
+#'                 Default is c("aic", "bic", "hqic").
+#' @return A list with components:
+#'   \item{betas}{Matrix of coefficients (betas), with columns named after criteria.}
+#'   \item{lambdas}{Vector of penalty parameters (lambdas) that minimize each criterion.}
+#' @examples
+#' x <- matrix(rnorm(100), ncol = 5)
+#' y <- rnorm(20)
+#' ic_lasso(x, y)
+#' @import glmnet
+#' @export
+ic_lasso <- function(x, y, criteria = c("aic", "bic", "hqic")) {
+  # Match and validate criteria
   criteria <- match.arg(criteria, several.ok = TRUE)
   # Fit the model using glmnet
   fit <- glmnet(x, y, family = "gaussian",
-                intercept = FALSE, standardize = FALSE, ...)
-  # Note: Intercepts are handled via prior demeaning
-  df <- fit$df                          # degrees of freedom w/o intercept
-  n_crit <- length(criteria)            # num criteria
-  intrs <- numeric(n_crit)              # placeholder intercepts
-  names(intrs) <- criteria              # name intercepts
-  betas <- matrix(NA, ncol(x), n_crit)  # placeholder slopes
-  colnames(betas) <- criteria           # name slopes
-  lambdas <- numeric(n_crit)            # placeholder penalties
-  names(lambdas) <- criteria            # name penalties
-  n <- nrow(x)                          # num observations
-  # Calculate mean squared errors and fit minimum information criterion
-  res <- y - predict(fit, x, s = fit$lambda)  # residuals n x num(lambda)
-  mse <- colMeans(res^2)                      # mse for each lambda candidate
-  for (crit in criteria) {
-    # Calculate the chosen information criterion
+                intercept = FALSE, standardize = FALSE)
+  # Extract degrees of freedom
+  df <- fit$df
+  n_crit <- length(criteria)
+  betas <- matrix(NA, ncol(x), n_crit)
+  colnames(betas) <- criteria
+  lambdas <- numeric(n_crit)
+  # Predict outcome for each candidate lambda
+  yhats <- x %*% fit$beta # n x num(lambda) matrix of predictions
+  minus_res <- sweep(yhats, 1, y, "-") # implied negative residuals
+  # Calculate sum of squared residuals for each candidate lambda
+  ssr <- colSums(minus_res^2)
+  # Calculate number of observations
+  n <- length(y)
+  n_log_ssr <- log(ssr) * n # n times log(SSR)
+  # Compute information criteria for each specified criterion
+  for (i in seq_along(criteria)) {
+    crit <- criteria[i]
     if (crit == "aic") {
-      ic <- n * log(mse) + 2 * df
+      ic <- n_log_ssr + 2 * df
     } else if (crit == "bic") {
-      ic <- n * log(mse) + log(n) * df
+      ic <- n_log_ssr + log(n) * df
     } else if (crit == "hqic") {
-      ic <- n * log(mse) + 2 * log(log(n)) * df
+      ic <- n_log_ssr + 2 * log(log(n)) * df
     } else {
       stop("Unknown information criterion")
     }
-    # Find the minimum information criterion, corresponding lambda and estimates
-    id_min <- which.min(ic)                         # identify minimizer
-    lambda_ic <- fit$lambda[id_min]                 # minimizer
-    beta <- as.matrix(coef(fit, s = lambda_ic)[-1]) # resulting slopes
-    betas[, crit] <- beta           # store slopes
-    lambdas[crit] <- lambda_ic      # store penalty (in eyes of glmnet)
+    id_min <- which.min(ic)         # identify minimizer
+    lambda_ic <- fit$lambda[id_min] # minimizing lambda
+    beta_ic <- fit$beta[, id_min]   # corresponding estimates
+    # Store results
+    betas[, i] <- beta_ic
+    lambdas[i] <- lambda_ic
   }
-  return(list(betas = betas, lambdas = lambdas))
+  # Return results as a list
+  list(betas = betas, lambdas = lambdas)
 }
+
+# Function to calculate the information criterion using glmnet
+# INPUTS:
+#   x:            matrix of predictors (n x p)
+#   y:            vector of response (n x 1)
+#   criteria:     character vector specifying the information criteria to use
+#                 (default is c("aic", "bic", "hqic"))
+#   standardize:  logical; if TRUE, standardize predictors
+#   ...:          additional arguments to pass to glmnet
+# OUTPUT: list with the following components:
+#   betas: matrix of betas, with columns named after the criteria
+#   lambdas: vector of lambdas that minimize each criterion
+# ic_lasso <- function(x, y, criteria = c("aic", "bic", "hqic"),
+#                      standardize = TRUE, ...) {
+#   criteria <- match.arg(criteria, several.ok = TRUE)
+#   # Fit the model using glmnet
+#   fit <- glmnet(x, y, family = "gaussian",
+#                 intercept = FALSE, standardize = standardize, ...)
+#   # Note: Intercepts are handled via prior demeaning
+#   df <- fit$df                          # degrees of freedom w/o intercept
+#   n_crit <- length(criteria)            # num criteria
+#   intrs <- numeric(n_crit)              # placeholder intercepts
+#   names(intrs) <- criteria              # name intercepts
+#   betas <- matrix(NA, ncol(x), n_crit)  # placeholder slopes
+#   colnames(betas) <- criteria           # name slopes
+#   lambdas <- numeric(n_crit)            # placeholder penalties
+#   names(lambdas) <- criteria            # name penalties
+#   n <- nrow(x)                          # num observations
+#   # Calculate mean squared errors and fit minimum information criterion
+#   res <- y - predict(fit, newx = x, s = fit$lambda)  # residuals n x num(lambda)
+#   mse <- colMeans(res^2)                      # mse for each lambda candidate
+#   for (crit in criteria) {
+#     # Calculate the chosen information criterion
+#     if (crit == "aic") {
+#       ic <- n * log(mse) + 2 * df
+#     } else if (crit == "bic") {
+#       ic <- n * log(mse) + log(n) * df
+#     } else if (crit == "hqic") {
+#       ic <- n * log(mse) + 2 * log(log(n)) * df
+#     } else {
+#       stop("Unknown information criterion")
+#     }
+#     # Find the minimum information criterion, corresponding lambda and estimates
+#     id_min <- which.min(ic)                         # identify minimizer
+#     lambda_ic <- fit$lambda[id_min]                 # minimizer
+#     beta <- as.matrix(coef(fit, s = lambda_ic)[-1]) # resulting slopes
+#     betas[, crit] <- beta           # store slopes
+#     lambdas[crit] <- lambda_ic      # store penalty (in eyes of glmnet)
+#   }
+#   return(list(betas = betas, lambdas = lambdas))
+# }
+## OLD VERSION WITHOUT WEIGHTING AS OPTION ##
+# # Function to calculate the information criterion using glmnet
+# # INPUTS:
+# #   x:          matrix of predictors (n x p)
+# #   y:          vector of response (n x 1)
+# #   criteria:   character vector specifying the information criteria to use
+# #               (default is c("aic", "bic", "hqic"))
+# #   ...:        additional arguments to pass to glmnet
+# # OUTPUT: list with the following components:
+# #   betas: matrix of betas, with columns named after the criteria
+# #   lambdas: vector of lambdas that minimize each criterion
+# ic_lasso <- function(x, y, criteria = c("aic", "bic", "hqic"), ...) {
+#   criteria <- match.arg(criteria, several.ok = TRUE)
+#   # Fit the model using glmnet
+#   fit <- glmnet(x, y, family = "gaussian",
+#                 intercept = FALSE, standardize = FALSE, ...)
+#   # Note: Intercepts are handled via prior demeaning
+#   df <- fit$df                          # degrees of freedom w/o intercept
+#   n_crit <- length(criteria)            # num criteria
+#   intrs <- numeric(n_crit)              # placeholder intercepts
+#   names(intrs) <- criteria              # name intercepts
+#   betas <- matrix(NA, ncol(x), n_crit)  # placeholder slopes
+#   colnames(betas) <- criteria           # name slopes
+#   lambdas <- numeric(n_crit)            # placeholder penalties
+#   names(lambdas) <- criteria            # name penalties
+#   n <- nrow(x)                          # num observations
+#   # Calculate mean squared errors and fit minimum information criterion
+#   res <- y - predict(fit, x, s = fit$lambda)  # residuals n x num(lambda)
+#   mse <- colMeans(res^2)                      # mse for each lambda candidate
+#   for (crit in criteria) {
+#     # Calculate the chosen information criterion
+#     if (crit == "aic") {
+#       ic <- n * log(mse) + 2 * df
+#     } else if (crit == "bic") {
+#       ic <- n * log(mse) + log(n) * df
+#     } else if (crit == "hqic") {
+#       ic <- n * log(mse) + 2 * log(log(n)) * df
+#     } else {
+#       stop("Unknown information criterion")
+#     }
+#     # Find the minimum information criterion, corresponding lambda and estimates
+#     id_min <- which.min(ic)                         # identify minimizer
+#     lambda_ic <- fit$lambda[id_min]                 # minimizer
+#     beta <- as.matrix(coef(fit, s = lambda_ic)[-1]) # resulting slopes
+#     betas[, crit] <- beta           # store slopes
+#     lambdas[crit] <- lambda_ic      # store penalty (in eyes of glmnet)
+#   }
+#   return(list(betas = betas, lambdas = lambdas))
+# }
 
 ## == SQUARE-ROOT LASSO FUNCTIONS == ##
 #' Square-Root Lasso Estimator
