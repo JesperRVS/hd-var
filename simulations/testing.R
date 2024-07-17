@@ -50,6 +50,59 @@ y0ton <- sim_data(n, p, seed = seed, r = r)
 
 ydata <- y0ton
 
+## ESTIMATION VIA IC-LASSO
+source("icLassoVAR.R")
+fit_ic_naive <- ic_lasso_var(ydata, criteria = c("aic", "bic", "hqic"),
+    post = FALSE, intercept = FALSE)
+x <- ydata[1:n, ]
+stdx <- sqrt(colMeans(x^2))
+upsilon <- matrix(stdx, nrow = p, ncol = p, byrow = TRUE)
+fit_ic <- ic_lasso_var(ydata, criteria = c("aic", "bic", "hqic"),
+    post = FALSE, intercept = FALSE, upsilon = upsilon)
+fit_ic_naive
+fit_ic
+fit_ic_naive_intrs <- ic_lasso_var(ydata, criteria = c("aic", "bic", "hqic"),
+    post = FALSE, intercept = TRUE)
+fit_ic_naive_post <- ic_lasso_var(ydata, criteria = c("aic", "bic", "hqic"),
+    post = TRUE, intercept = FALSE)
+fit_ic_naive_post_intrs <- ic_lasso_var(ydata, criteria = c("aic", "bic", "hqic"),
+    post = TRUE, intercept = TRUE)
+##
+xtemp <- matrix(rnorm(n * p), nrow = n, ncol = p)
+sigma_p <- 10
+theta_p <- 1 / sigma_p
+x <- cbind(xtemp[, 1:(p - 1)], sigma_p * xtemp[, p])
+y <- 1 * x[, 1] + theta_p * x[, p] + sqrt(10) * rnorm(n)
+
+fit <- glmnet(x, y, family = "gaussian",
+              intercept = FALSE, standardize = TRUE)
+
+source("helper_functions.R")
+fit_ic_naive <- ic_lasso(x, y, criteria = c("aic", "bic", "hqic"))
+stdx <- sqrt(colMeans(x^2))
+xtilde <- sweep(x, 2, stdx, FUN = "/")
+fit_ic_proper <- ic_lasso(xtilde, y, criteria = c("aic", "bic", "hqic"))
+sweep(fit_ic_proper$betas, 1, stdx, "/")
+
+fit_ic
+
+# ESTIMATION VIA INFORMATION CRITERIA
+source("icLassoVAR.R")
+fit_ic_naive <- ic_lasso_var(ydata, criteria = c("aic", "bic", "hqic"),
+    post = FALSE, intercept = FALSE, standardize = FALSE)
+fit_ic <- ic_lasso_var(ydata, criteria = c("aic", "bic", "hqic"),
+    post = FALSE, intercept = FALSE, standardize = TRUE)
+fit_ic_intr <- ic_lasso_var(ydata, criteria = c("aic", "bic", "hqic"),
+    post = FALSE, intercept = TRUE, standardize = TRUE)
+fit_post_ic <- ic_lasso_var(ydata, criteria = c("aic", "bic", "hqic"),
+    post = TRUE, intercept = FALSE, standardize = TRUE)
+fit_post_ic_intr <- ic_lasso_var(ydata, criteria = c("aic", "bic", "hqic"),
+    post = TRUE, intercept = TRUE, standardize = TRUE)
+
+
+
+## OLD BELOW THIS LINE ##
+
 # ESTIMATION VIA SQRT-LASSO
 q <- 1
 source("sqrtLassoVAR.R")
