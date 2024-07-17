@@ -7,11 +7,12 @@
     # [x] Sqrt-Lasso,
     # [x] Post-Sqrt-Lasso
 # 1. Create main_sim file
-# 2. Use 5 designs (1) "Diagonal":     Design A as in KC2015 (2) "Correlated":
-#   Design A' w/ strongly correlated innovations (hence outcomes) (3)
-#   "HeavyTailed":  Design A'' w/ heavy-tailed (here: student-t(5) innovations)
-#   (4) "BlockDiag":    Design B as in KC2015 (5) "NearBand":     Design C as in
-#   KC2015
+# 2. Use 5 designs 
+#   (1) "Diagonal":     Design A as in KC2015
+#   (2) "Correlated":   Design A' w/ strongly correlated innovations (hence outcomes)
+#   (3) "HeavyTailed":  Design A'' w/ heavy-tailed (here: student-t(5) innovations)
+#   (4) "BlockDiag":    Design B as in KC2015 
+#   (5) "NearBand":     Design C as in KC2015
 # 3. Use the following estimation methods (1) Lasso w/ Lasso updating (2)
 #   Post-Lasso w/ post-Lasso updating (3) AIC-Lasso (4) Post-AIC-Lasso (5)
 #   BIC-Lasso (6) Post-BIC-Lasso (7) Sqrt-Lasso (8) Post-Sqrt-Lasso (9) Least
