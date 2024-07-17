@@ -4,8 +4,8 @@
     # [x] Post-AIC-Lasso,
     # [x] BIC-Lasso,
     # [x] Post-BIC-Lasso,
-    # Sqrt-Lasso,
-    # Post-Sqrt-Lasso
+    # [x] Sqrt-Lasso,
+    # [x] Post-Sqrt-Lasso
 # 1. Create main_sim file
 # 2. Use 5 designs (1) "Diagonal":     Design A as in KC2015 (2) "Correlated":
 #   Design A' w/ strongly correlated innovations (hence outcomes) (3)
@@ -51,19 +51,37 @@ y0ton <- sim_data(n, p, seed = seed, r = r)
 ydata <- y0ton
 
 # ESTIMATION VIA SQRT-LASSO
+q <- 1
+source("sqrtLassoVAR.R")
+fit_sqrtl_naive <- sqrt_lasso_var(ydata, q = q, post = FALSE, intercept = FALSE)
+x <- ydata[1:n, ]
+fit_sqrtl <- sqrt_lasso_var(ydata, q = q, post = FALSE, intercept = FALSE,
+    upsilon = matrix(sqrt(colMeans(x^2)), nrow = p, ncol = p * q))
+fit_post_sqrt_lasso <- sqrt_lasso_var(ydata, q = q, post = TRUE, intercept = FALSE,
+    upsilon = matrix(sqrt(colMeans(x^2)), nrow = p, ncol = p * q))
+fit_sqrt_lasso_intr <- sqrt_lasso_var(ydata, q = q, post = FALSE, intercept = TRUE,
+    upsilon = matrix(sqrt(colMeans(x^2)), nrow = p, ncol = p * q))
+fit_post_sqrt_lasso_intr <- sqrt_lasso_var(ydata, q = q, post = TRUE, intercept = TRUE,
+    upsilon = matrix(sqrt(colMeans(x^2)), nrow = p, ncol = p * q))
+
+## OLD BELOW
 source("helper_functions.R")
-# x <- ydata[1:n, ]
-# y <- ydata[2:(1 + n), ]
-xy <- unpack(ydata, q = 1)
+pq <- p * q
+xy <- unpack(ydata, q = q)
 x <- xy$x
 y <- xy$y
+
+
+
+
 c <- 1.1
 gamma <- 0.1 / log(max(c(n, p)))
-lambda_star <- c * sqrt(n) * qnorm(1 - gamma / (2 * p^2))
-upsilon <- matrix(sqrt(colMeans(x^2)), nrow = p, ncol = ncol(x))
+lambda_star <- c * sqrt(n) * qnorm(1 - gamma / (2 * p * pq))
+upsilon <- matrix(sqrt(colMeans(x^2)), nrow = p, ncol = pq)
 # upsilon <- matrix(1, nrow = p, ncol = ncol(x))
 thats_sqrt_lasso <- mult_sqrt_lasso(x, y, lambda = lambda_star,
     upsilon = upsilon)
+thats_sqrt_lasso
 # thats_sqrt_lasso <- mult_sqrt_lasso(x, y, lambda = lambda_star,
 #     upsilon = upsilon, print_out = FALSE, max_iter = 100)
 
