@@ -144,17 +144,45 @@ mult_refit <- function(x, y, that) {
 }
 
 ## == LASSO FUNCTIONS == ##
-
-# Multiple responses weighted LASSO using same regressors
-# INPUTS
-#   x: n x pq matrix of predictors
-#   y: n x p matrix of responses
-#   lambda_glmnet: penalty level in eyes of glmnet
-#   upsilon: p x pq matrix of penalty loadings
-#   full_path: logical; if TRUE, use full path of lambda values
-#   tol_glmnet: convergence tolerance for glmnet
-# OUTPUT
-#   that: p x pq matrix of estimates
+#' Multiple LASSO using glmnet
+#'
+#' This function performs multiple LASSO regression using the glmnet package,
+#' optionally allowing for variable rescaling and choice between single lambda
+#' or full regularization path solutions.
+#'
+#' @param x A matrix of predictors (observations x variables).
+#' @param y A matrix of responses (observations x outcomes).
+#' @param lambda_glmnet Numeric. Regularization parameter for glmnet.
+#' @param upsilon Optional. Matrix of rescaling factors for predictors.
+#'   Defaults to unit loadings.
+#' @param full_path Logical. If TRUE, uses full regularization path of glmnet.
+#'   If FALSE (default), uses single lambda specified by lambda_glmnet.
+#' @param tol_glmnet Numeric. Convergence threshold for glmnet.
+#'
+#' @return A matrix of coefficient estimates for each response variable.
+#'
+#' @details
+#' - For each response variable, predictors are rescaled using upsilon if provided.
+#' - If full_path = FALSE, glmnet is used with a single lambda specified by
+#'   lambda_glmnet.
+#' - If full_path = TRUE, glmnet's own lambda sequence is used, and coefficients
+#'   are interpolated to obtain estimates corresponding to lambda_glmnet.
+#'
+#' @seealso \code{\link[glmnet]{glmnet}}
+#' @keywords regression
+#'
+#' @examples
+#' # Generate example data
+#' set.seed(123)
+#' n <- 100
+#' p <- 5
+#' q <- 3
+#' x <- matrix(rnorm(n * p), n, p)
+#' y <- matrix(rnorm(n * q), n, q)
+#' # Perform multiple LASSO
+#' mult_lasso(x, y, lambda_glmnet = 0.1)
+#'
+#' @export
 mult_lasso <- function(x, y, lambda_glmnet, upsilon = NULL,
                        full_path = FALSE, tol_glmnet = 1e-4) {
   if (missing(x) || missing(y) || missing(lambda_glmnet)) {
@@ -190,6 +218,52 @@ mult_lasso <- function(x, y, lambda_glmnet, upsilon = NULL,
   }
   return(that) # return as sparse matrix
 }
+## OLD VERSION BELOW ##
+# # Multiple responses weighted LASSO using same regressors
+# # INPUTS
+# #   x: n x pq matrix of predictors
+# #   y: n x p matrix of responses
+# #   lambda_glmnet: penalty level in eyes of glmnet
+# #   upsilon: p x pq matrix of penalty loadings
+# #   full_path: logical; if TRUE, use full path of lambda values
+# #   tol_glmnet: convergence tolerance for glmnet
+# # OUTPUT
+# #   that: p x pq matrix of estimates
+# mult_lasso <- function(x, y, lambda_glmnet, upsilon = NULL,
+#                        full_path = FALSE, tol_glmnet = 1e-4) {
+#   if (missing(x) || missing(y) || missing(lambda_glmnet)) {
+#     stop("Not enough input arguments.")
+#   }
+#   pq <- ncol(x)  # columns in x = pq = total number of regressors
+#   p <- ncol(y)   # q = autoregressive order, p = dim(output)
+#   if (nrow(x) != nrow(y)) {
+#     stop("Number of observations (rows in x and y) do not match.")
+#   }
+#   if (is.null(upsilon)) {
+#     upsilon <- matrix(1, p, pq) # default to unit loadings
+#   }
+#   that <- matrix(NA, p, pq) # placeholder for estimates
+#   if (full_path == FALSE) { # if full path *not* requested (= default)...
+#     for (i in 1:p) {        # use glmnet w/ single lambda
+#       xtilde <- sweep(x, 2, upsilon[i, ], FUN = "/")  # rescale using loadings
+#       fit_i <- glmnet(xtilde, y[, i], family = "gaussian",
+#                       standardize = FALSE, intercept = FALSE,
+#                       lambda = lambda_glmnet, thresh = tol_glmnet)
+#       that[i, ] <- coef(fit_i)[-1] / upsilon[i, ] # original scaling
+#     }
+#   } else {            # if full path requested (not default)...
+#     for (i in 1:p) {  # use glmnet's lambda sequence and interpolate
+#       xtilde <- sweep(x, 2, upsilon[i, ], FUN = "/")  # rescale using loadings
+#       fit_i <- glmnet(xtilde, y[, i], family = "gaussian",
+#                       standardize = FALSE, intercept = FALSE,
+#                       thresh = tol_glmnet)
+#       # ^-- glmnet constructs its own lambda sequence
+#       that_i_temp <- coef(fit_i, s = lambda_glmnet)[-1] # interpolate
+#       that[i, ] <- that_i_temp / upsilon[i, ]           # original scale
+#     }
+#   }
+#   return(that) # return as sparse matrix
+# }
 
 ## == INFORMATION CRITERIA FUNCTIONS == ##
 #' Compute Information Criteria for Lasso Regression using glmnet
