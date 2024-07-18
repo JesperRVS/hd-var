@@ -69,6 +69,16 @@ unpack <- function(data, q = 1) {
 #' (X'X)b = X'y. If X'X is of full rank, it uses the solve function for
 #' efficiency. If X'X is rank-deficient, it uses singular value decomposition
 #' (SVD) to compute the (Moore-Penrose) solution.
+#' @note
+#' The Matrix package uses the S4 class system (Chambers, 1998) to retain
+#' information on the structure of matrices from the intermediate calculations.
+#' A general matrix in dense storage, created by the Matrix function, has class
+#' "dgeMatrix" but its cross-product has class "dpoMatrix". The solve methods
+#' for the "dpoMatrix" class use the Cholesky decomposition.
+#'
+#' The rank computation itself involves the SVD of x. However, it is still
+#' faster to call Matrix::rankMatrix than to compute the SVD directly and deduce
+#' the rank.
 #' @examples
 #' x <- matrix(rnorm(100), ncol = 5)
 #' y <- rnorm(20)
@@ -95,40 +105,40 @@ ls_sol <- function(x, y) {
   fit <- list(sol = sol, full_rank = full_rank)
   return(fit)
 }
-# Notes:
-# (1) The Matrix package uses the S4 class system (Chambers, 1998) to retain
-# information on the structure of matrices from the intermediate calculations. A
-# general matrix in dense storage, created by the Matrix function, has class
-# "dgeMatrix" but its cross-product has class "dpoMatrix". The solve methods for
-# the "dpoMatrix" class use the Cholesky decomposition.
-# (2) The rank computation itself involves the SVD of x. However, it is still
-# faster to call Matrix::rankMatrix than to compute the SVD directly and deduce
-# the rank.
 
-# Least squares refitting with multiple responses and same regressors
-# INPUTS
-#   x: n x pq matrix of predictors
-#   y: n x p matrix of responses
-#   that: p x pq matrix of estimates
-# OUTPUTs refit: list with the following components
-#   that: p x pq matrix of refitted estimates
-#   full_rank: p x 1 logical vector; if TRUE, selected regressors of full rank
+#' Least Squares Refitting with Multiple Responses and Same Regressors
+#'
+#' This function refits least squares models for multiple responses using the
+#' same regressors. It returns a list containing the refitted estimates and
+#' a logical vector indicating if the selected regressors are of full rank.
+#'
+#' @param x A matrix (n x pq) of predictors.
+#' @param y A matrix (n x p) of responses.
+#' @param that A matrix (p x pq) of estimates.
+#'
+#' @return A list with the following components:
+#' \item{that}{A matrix (p x pq) of refitted estimates.}
+#' \item{full_rank}{A logical vector (p x 1); TRUE if selected regressors are
+#'                  of full rank.}
+#'
+#' @examples
+#' # Example usage:
+#' x <- matrix(rnorm(100), 10, 10)
+#' y <- matrix(rnorm(20), 10, 2)
+#' that <- matrix(0, 2, 10)
+#' result <- mult_refit(x, y, that)
 mult_refit <- function(x, y, that) {
-  p <- ncol(y)                           # num responses
-  sel <- that != 0                       # flag selections
-  full_rank <- matrix(NA, p, 1)          # full rank flag
-  for (i in 1:p) {
-    shat_i <- sum(sel[i, ])              # num selected
-    if (shat_i > 0) {                    # if something selected...
-      xi <- as.matrix(x[, sel[i, ]])     # get active regressors
-      # ^-- as.matrix used to keep the column dimension (also when = 1)
-      fit_i <- ls_sol(xi, y[, i])        # refit
-      that[i, sel[i, ]] <- fit_i$sol     # overwrite (keeping zeros)
-      full_rank[i, 1] <- fit_i$full_rank # check rank
-    } else {                             # if nothing selected...
-      full_rank[i, 1] <- TRUE            # rank considered "full"
-    }
+  p <- ncol(y)                          # num responses
+  sel <- that != 0                      # flag selections
+  full_rank <- logical(p)               # full rank flag (initialize FALSE)
+  num_selections <- rowSums(sel)        # precompute num selections
+  for (i in which(num_selections > 0)) {
+    xi <- as.matrix(x[, sel[i, ]])      # get active regressors
+    fit_i <- ls_sol(xi, y[, i])         # refit
+    that[i, sel[i, ]] <- fit_i$sol      # overwrite (keeping zeros)
+    full_rank[i] <- fit_i$full_rank     # check rank
   }
+  full_rank[num_selections == 0] <- TRUE  # default full rank for no selections
   refit <- list(that = that, full_rank = full_rank)
   return(refit)
 }
