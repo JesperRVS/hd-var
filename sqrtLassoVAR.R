@@ -36,10 +36,6 @@
 #' result <- sqrt_lasso_var(data, q = 2)
 #'
 #' @export
-library("MASS", "Matrix")
-# Notes:
-#   MASS is used for Moore-Penrose pseudoinverse (ginv)
-#   Matrix is used for rankMatrix and Diagonal
 source("helper_functions.R")  # for mult_sqrt_lasso and refitting
 sqrt_lasso_var <- function(data, q = 1, post = TRUE, intercept = TRUE,
                            c = 1.1, gamma = 0.1 / log(max(dim(data))),
