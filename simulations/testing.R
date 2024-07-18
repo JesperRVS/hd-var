@@ -39,17 +39,46 @@ using <- function(...) {
 }
 using(append(libest, libplt))
 
-# SIMULATION
+# # SIMULATION
 RNGkind(normal.kind = "Kinderman-Ramage") # faster normal draws (will do many)
 seed <- 2345
-r <- 0
-source("simulations/design_A.R")
-n <- 1000
-p <- 4
+# r <- 0
+# source("simulations/design_A.R")
+n <- 100
+p <- 101
+np <- n * p
 
-y0ton <- sim_data(n, p, seed = seed, r = r)
+x <- matrix(rnorm(np), n, p)
+y <- x %*% sample(1:p, p) + rnorm(n)
+source("helper_functions.R")
 
-ydata <- y0ton
+
+# y0ton <- sim_data(n, p, seed = seed, r = r)
+
+# ydata <- y0ton
+
+library("rbenchmark")
+source("helper_functions.R")
+set.seed(seed)
+benchmark("ls_sol" = {
+            x <- matrix(rnorm(np), n, p)
+            y <- x %*% sample(1:p, p) + rnorm(n)
+            ls_sol(x, y)
+          },
+          "ls_sol_2" = {
+            x <- matrix(rnorm(np), n, p)
+            y <- x %*% sample(1:p, p) + rnorm(n)
+            ls_sol_2(x, y)
+          },
+          replications = 1000,
+          order = "relative",
+          columns = c("test", "replications", "elapsed", "relative"))
+
+
+## ESTIMATION
+source("lassoVAR.R")
+q <- 1 # autoregressive order
+fit_lasso <- lasso_var(ydata, q = q, post = FALSE, intercept = FALSE)
 
 ## ESTIMATION VIA IC-LASSO
 source("icLassoVAR.R")
