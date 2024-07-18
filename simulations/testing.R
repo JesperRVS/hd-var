@@ -49,8 +49,36 @@ p <- 101
 np <- n * p
 
 x <- matrix(rnorm(np), n, p)
-y <- x %*% sample(1:p, p) + rnorm(n)
+y <- x %*% matrix(1, p, 1) + rnorm(n)
 source("helper_functions.R")
+
+gamma <- 0.1 / log(max(c(n, p)))
+lambda <- 2 * sqrt(n) * qnorm(1 - gamma / (2 * p))
+fit_lasso <- mult_lasso(x, y, lambda_glmnet = lambda / (2 * n), 
+    full_path = FALSE)
+
+refit_lasso <- mult_refit(x, y, fit_lasso)
+
+# plot lasso estimates versus refitted estimates with
+# the regressor index on the first axis and the estimates on the second axis
+df <- data.frame(cbind(1:p, t(fit_lasso), t(refit_lasso$that)))
+colnames(df) <- c("j", "Lasso", "Refitted")
+df <- melt(df, id.vars = "j")
+ggplot(data = df, aes(x = j, y = value, color = variable)) +
+    geom_line() +
+    labs(x = "Regressor index", y = "Estimate",
+         title = "Lasso estimates versus refitted estimates")
+# same plot but only first ten estimates
+df <- data.frame(cbind(1:10,
+                       matrix(fit_lasso[1:10], 10, 1),
+                       matrix(refit_lasso$that[1:10], 10, 1)))
+colnames(df) <- c("j", "Lasso", "Refitted")
+df <- melt(df, id.vars = "j")
+ggplot(data = df, aes(x = j, y = value, color = variable)) +
+    geom_line() +
+    labs(x = "Regressor index", y = "Estimate",
+         title = "Lasso estimates versus refitted estimates (first ten)")
+
 
 
 # y0ton <- sim_data(n, p, seed = seed, r = r)
