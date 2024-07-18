@@ -49,6 +49,7 @@
 #' }
 #'
 #' @export
+source("helper_functions.R")
 lasso_var <- function(data, q = 1, post = TRUE, intercept = TRUE,
                       c = 1.1, gamma = 0.1 / log(max(dim(data))), k = 15,
                       tol_ups = 1e-3,  warn = TRUE, full_path = FALSE,
