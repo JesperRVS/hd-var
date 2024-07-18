@@ -35,6 +35,9 @@ library("glmnet", "MASS", "Matrix")
 #'
 #' @export
 unpack <- function(data, q = 1) {
+  if (missing(data) || is.null(data)) {
+    stop("No data provided.")
+  }
   nplusq <- nrow(data)  # n plus q
   p <- ncol(data)       # p = number of variables
   n <- nplusq - q       # n = effective sample size
@@ -51,51 +54,56 @@ unpack <- function(data, q = 1) {
   return(list(x = x, y = y))
 }
 
-# # Unpack data and construct predictors and response
-# # INPUTS
-# #   data:   (q + n) x p matrix of data (n = effective sample size)
-# #   q:      autoregressive order; default is 1 (i.e. VAR(1) model)
-# # OUTPUT: list with the following components:
-# #   x:      n x pq matrix of predictors
-# #   y:      n x p matrix of responses
-# unpack <- function(data, q = 1) {
-#   nplusq <- nrow(data)  # n plus q
-#   p <- ncol(data)       # p = dim of output
-#   n <- nplusq - q       # n = effective sample size
-#   pq <- p * q           # pq = total number of variables
-#   y <- data[(q + 1):(q + n), ]  # response
-#   x <- matrix(NA, n, pq)        # predictors
-#   for (ell in 1:q) {
-#     # where to store ellth lag --v
-#     block_ell <- ((ell - 1) * p + 1):(ell * p)
-#     # periods corresponding to ellth lag --v
-#     lag_ell <- (q + 1 - ell):(q + n - ell)
-#     # store 1st lags first, 2nd second,... --v
-#     x[, block_ell] <- data[lag_ell, ]
-#   }
-#   return(list(x = x, y = y))
-# }
-
 ## == LEAST SQUARES FUNCTIONS == ##
-
-# Find solution to minimize ||y - Xb||_{\ell_2} over b
-# INPUTS
-#   x:          n x p matrix of regressors
-#   y:          n x 1 vector of responses
-# OUTPUTs fit: list with the following components
-#   sol:        p x 1 vector of OLS estimates
-#   full_rank:  logical; if TRUE, regressors of full rank
+#' Least Squares Solution
+#'
+#' Find the solution to minimize ||y - Xb||_{\ell_2} over b.
+#'
+#' @param x n x p matrix of regressors.
+#' @param y n x 1 vector of responses.
+#' @return A list with the following components:
+#'   \item{sol}{p x 1 vector of OLS estimates.}
+#'   \item{full_rank}{logical; TRUE if regressors are of full rank.}
+#' @details
+#' This function computes the least squares solution for the linear system
+#' (X'X)b = X'y. If X'X is of full rank, it uses the solve function for
+#' efficiency. If X'X is rank-deficient, it uses singular value decomposition
+#' (SVD) to compute the (Moore-Penrose) solution.
+#' @examples
+#' x <- matrix(rnorm(100), ncol = 5)
+#' y <- rnorm(20)
+#' fit <- ls_sol(x, y)
+#' @export
 ls_sol <- function(x, y) {
-  full_rank <- ncol(x) == Matrix::rankMatrix(x)[1] # check for full column rank
-  if (full_rank == TRUE) { # if full rank, produce unique (OLS) solution
+  # Check for full column rank
+  full_rank <- ncol(x) == Matrix::rankMatrix(x)[1]
+  if (full_rank) {
+    # When full rank, produce unique (OLS) solution
     sol <- solve(crossprod(x), crossprod(x, y))
-  } else { # o/w produce solution based on pseudoinverse
-    sol <- MASS::ginv(x) %*% y # ginv is Moore-Penrose pseudoinverse
-    # TODO: Find more clever way to handle rank-deficient case
+    # This is (X' X)^{-1} X' y (which equals X^+ y)
+  } else {
+    # Use SVD for rank-deficient case
+    svd_x <- svd(x)                             # compute SVD
+    d <- svd_x$d                                # singular values
+    u <- svd_x$u                                # left singular vectors
+    v <- svd_x$v                                # right singular vectors
+    tol <- max(dim(x)) * .Machine$double.eps    # scale free tolerance
+    d_inv <- ifelse(d > tol * max(d), 1 / d, 0) # inverse singular values
+    sol <- v %*% (d_inv * t(u) %*% y)
+    # This is X^+ y
   }
   fit <- list(sol = sol, full_rank = full_rank)
   return(fit)
 }
+# Notes:
+# (1) The Matrix package uses the S4 class system (Chambers, 1998) to retain
+# information on the structure of matrices from the intermediate calculations. A
+# general matrix in dense storage, created by the Matrix function, has class
+# "dgeMatrix" but its cross-product has class "dpoMatrix". The solve methods for
+# the "dpoMatrix" class use the Cholesky decomposition.
+# (2) The rank computation itself involves the SVD of x. However, it is still
+# faster to call Matrix::rankMatrix than to compute the SVD directly and deduce
+# the rank.
 
 # Least squares refitting with multiple responses and same regressors
 # INPUTS
