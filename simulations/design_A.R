@@ -4,6 +4,11 @@
 ## Dependencies
 library("Matrix") # for triu and Diagonal
 
+## IMPORT COEFFICIENT MATRIX FUNCTION
+source("simulations/coef_mats.R") # for coef_mat_c
+# coef_mat_a <- function(p) {0}
+# insertSource("coef_mats.R", functions = "coef_mat_a")
+
 ## MAIN FUNCTION
 
 # INPUTS:
@@ -14,16 +19,13 @@ library("Matrix") # for triu and Diagonal
 #               (if "gaussian")
 #   family:     Distribution of eps_0i, "gaussian" or "student"
 #   df:         Degrees of freedom for t dist (if "student")
-#   seed:       Seed for RNG
-#   r:          MC iter
 #   nburn:      No. of burn-in periods
 # OUTPUT:
 #   y0ton:      (1 + n) x p outcome matrix (after burn-in)
-sim_data <- function(n = 100, p = 4,
-                     family = "gaussian", sigma_eps = 0.1, rho = 0, df = 3,
-                     seed = NULL, r = NULL, nburn = 10000) {
-  set.seed(seed + r)                            # set seed for reproducibility
-  n_tot <- nburn + 1 + n                        # total no. of periods
+sim_data_a <- function(n = 100, p = 4,
+                      family = "gaussian", sigma_eps = 0.1, rho = 0, df = 3,
+                      nburn = 10000) {
+  n_tot <- nburn + 1 + n          # total no. of periods
   # Simulate n_tot x p innovations
   eps <- sim_eps(n = n_tot, p = p, family = family,
                  sigma_eps = sigma_eps, rho = rho, df = df)
@@ -32,7 +34,7 @@ sim_data <- function(n = 100, p = 4,
   yinit <- matrix(0, p, 1)        # p x 1 initial values (zeros)
   ylong <- matrix(NA, p, n_tot)   # p x n_tot outcome matrix
   ylong[, 1] <- yinit             # initiate from all zeros
-  theta <- coef_mat(p)  # specify coef matrix (diagonal, sparse)
+  theta <- coef_mat_a(p)  # specify coef matrix (diagonal, sparse)
   for (t in 2:n_tot) {
     ylong[, t] <- as.matrix(theta %*% ylong[, t - 1] + eps[, t])
   }
@@ -87,16 +89,4 @@ cor_mat <- function(p, rho) {
   tri_up <- Matrix::triu(sigma_temp, 1) # strict upper triangle
   sigma <- Matrix::Diagonal(p) + tri_up + t(tri_up) # symmetrize
   return(sigma)
-}
-
-# Coefficient matrix for the VAR(1) process
-# INPUTS:
-#   theta:      VAR(1) coefficient, scalar
-#   p:          System dimension, integer
-# OUTPUT:
-#   theta:      p x p VAR(1) coefficient matrix (diagonal, sparse)
-coef_mat <- function(p) {
-  theta <- 0.5
-  m <- Matrix::Diagonal(n = p, x = theta)
-  return(m)
 }
