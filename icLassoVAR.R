@@ -96,7 +96,7 @@ ic_lasso_var <- function(data, q = 1, criteria = c("aic", "bic", "hqic"),
     intrs <- NULL
   }
   # Return results as a list
-  return(list(intrs = intrs, thats = thats, 
+  return(list(intrs = intrs, thats = thats,
               full_rank_post = full_rank_post))
 }
 ## OLD VERSION BELOW ##
