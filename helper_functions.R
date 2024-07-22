@@ -462,7 +462,7 @@ mult_sqrt_lasso <- function(x, y, lambda, upsilon = NULL,
   # If no penalty loadings provided, default to sqrt(column means of x^2)
   if (is.null(upsilon)) {
     # upsilon <- matrix(1, p, pq) # default to unit loadings
-    # upsilon <- sqrt(matrix(colMeans(x^2), p, pq, byrow = TRUE))
+    upsilon <- sqrt(matrix(colMeans(x^2), p, pq, byrow = TRUE))
   }
   if (nrow(upsilon) != p || ncol(upsilon) != pq) {
     stop("Invalid dimensions for upsilon.")
