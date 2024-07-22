@@ -51,14 +51,13 @@
 #' @export
 source("helper_functions.R")
 lasso_var <- function(data, q = 1, post = TRUE, intercept = TRUE,
-                      c = 1.1, gamma = 0.1 / log(max(dim(data))), k = 15,
+                      c = 1.1, gamma = NULL, k = 15,
                       tol_ups = 1e-3,  warn = TRUE, full_path = FALSE,
                       tol_glmnet = 1e-4) {
+  # INITIALIZE
   if (missing(data) || is.null(data)) {
     stop("No data provided.")
   }
-
-  # INITIALIZE
   # Unpack data and construct predictors and response
   nplusq <- nrow(data)  # n plus q
   p <- ncol(data)       # p = dim of output
@@ -67,6 +66,11 @@ lasso_var <- function(data, q = 1, post = TRUE, intercept = TRUE,
   xy_data <- unpack(data = data, q = q) # unpack data
   x <- xy_data$x        # predictors
   y <- xy_data$y        # responses
+
+  # Probability tolerance
+  if (is.null(gamma)) {
+    gamma <-  0.1 / log(max(c(n, pq)))
+  }
 
   # Penalty level
   lambda_star <- 2 * c * sqrt(n) * qnorm(1 - gamma / (2 * q * p^2))
