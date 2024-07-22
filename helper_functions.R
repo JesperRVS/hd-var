@@ -360,9 +360,9 @@ sqrt_lasso <- function(x, y, lambda, max_iter = 100, rel_tol_norm = 1e-4) {
   n <- nrow(x)
   p <- ncol(x)
   # Ridge matrix for the initial beta estimate
-  ridge_matrix <- Matrix::Diagonal(p, x = lambda)
+  ridge_matrix <- diag(x = lambda, nrow = p)
   beta <- solve(crossprod(x) + ridge_matrix, crossprod(x, y))
-  beta <- as.matrix(beta)
+  # beta <- as.matrix(beta)
   # Precompute quantities for the algorithm
   iter <- 0
   xx <- crossprod(x) / n
@@ -399,6 +399,7 @@ sqrt_lasso <- function(x, y, lambda, max_iter = 100, rel_tol_norm = 1e-4) {
         qhat <- mean(error^2)
       }
     }
+    print(beta)
     # Check for convergence using the relative change in the Euclidean norm
     norm_diff <- norm(beta - beta_old, type = "2")          # numerator
     norm_beta_old <- norm(beta_old, type = "2") + epsilon   # denominator
@@ -458,8 +459,10 @@ mult_sqrt_lasso <- function(x, y, lambda, upsilon = NULL,
   if (nrow(x) != nrow(y)) {
     stop("Number of observations (rows in x and y) do not match.")
   }
+  # If no penalty loadings provided, default to sqrt(column means of x^2)
   if (is.null(upsilon)) {
-    upsilon <- matrix(1, p, pq) # default to unit loadings
+    # upsilon <- matrix(1, p, pq) # default to unit loadings
+    # upsilon <- sqrt(matrix(colMeans(x^2), p, pq, byrow = TRUE))
   }
   if (nrow(upsilon) != p || ncol(upsilon) != pq) {
     stop("Invalid dimensions for upsilon.")
