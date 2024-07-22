@@ -38,7 +38,7 @@
 #' @export
 source("helper_functions.R")  # for mult_sqrt_lasso and refitting
 sqrt_lasso_var <- function(data, q = 1, post = TRUE, intercept = TRUE,
-                           c = 1.1, gamma = 0.1 / log(max(dim(data))),
+                           c = 1.1, gamma = NULL,
                            upsilon = NULL,
                            max_iter = 100, rel_tol_norm = 1e-4) {
   if (missing(data) || is.null(data)) {
@@ -53,15 +53,13 @@ sqrt_lasso_var <- function(data, q = 1, post = TRUE, intercept = TRUE,
   xy_data <- unpack(data, q = q) # unpack data
   x <- xy_data$x        # predictors
   y <- xy_data$y        # responses
+  # Probability tolerance
+  if (is.null(gamma)) {
+    gamma <- 0.1 / log(max(c(n, pq)))
+  }
   # Penalty level in eyes of square-root LASSO
   lambda_star_sqrt <- c * sqrt(n) * qnorm(1 - gamma / (2 * p * pq))
   # Note: Sqrt-LASSO objective cancels out the "2" in the KKT conditions
-  if (is.null(upsilon)) {
-    upsilon <- matrix(1, p, pq) # default to unit loadings
-  }
-  if (nrow(upsilon) != p || ncol(upsilon) != pq) {
-    stop("Invalid dimensions for upsilon.")
-  }
   # If intercepts requested, demean before proceeding
   if (intercept) {
     ybar <- colMeans(y)     # response means as p x 1 vector
@@ -70,11 +68,19 @@ sqrt_lasso_var <- function(data, q = 1, post = TRUE, intercept = TRUE,
     x <- sweep(x, 2, xbar)  # demean predictors
   }
   # Note: Means are stored to back out intercepts later
+  # If no penalty loadings provided, default to sqrt(column means of x^2)
+  if (is.null(upsilon)) {
+    # upsilon <- matrix(1, p, pq) # default to unit loadings
+    upsilon <- sqrt(matrix(colMeans(x^2), p, pq, byrow = TRUE))
+  }
+  if (nrow(upsilon) != p || ncol(upsilon) != pq) {
+    stop("Invalid dimensions for upsilon.")
+  }
   # ESTIMATE
   # Estimate the square-root LASSO VAR
   that <- mult_sqrt_lasso(x, y, lambda = lambda_star_sqrt,
                           upsilon = upsilon,
-                          max_iter = max_iter, 
+                          max_iter = max_iter,
                           rel_tol_norm = rel_tol_norm)
   # POST-PROCESS
   # If requested, refit estimates after selection
