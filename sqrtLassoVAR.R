@@ -38,8 +38,7 @@
 #' @export
 source("helper_functions.R")  # for mult_sqrt_lasso and refitting
 sqrt_lasso_var <- function(data, q = 1, post = TRUE, intercept = TRUE,
-                           c = 1.1, gamma = NULL,
-                           upsilon = NULL,
+                           c = 1.1, gamma = NULL, upsilon = NULL,
                            max_iter = 100, rel_tol_norm = 1e-4) {
   if (missing(data) || is.null(data)) {
     stop("No data provided.")

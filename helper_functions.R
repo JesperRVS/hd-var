@@ -399,7 +399,6 @@ sqrt_lasso <- function(x, y, lambda, max_iter = 100, rel_tol_norm = 1e-4) {
         qhat <- mean(error^2)
       }
     }
-    print(beta)
     # Check for convergence using the relative change in the Euclidean norm
     norm_diff <- norm(beta - beta_old, type = "2")          # numerator
     norm_beta_old <- norm(beta_old, type = "2") + epsilon   # denominator

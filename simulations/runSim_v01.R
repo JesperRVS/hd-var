@@ -1,17 +1,10 @@
 ## TODO:
-# 1. Create main_sim file
-# 2. Use 5 designs 
+# Use 5 designs 
 #   (1) "Diagonal":     Design A as in KC2015
 #   (2) "Correlated":   Design A' w/ strongly correlated innovations (hence outcomes)
 #   (3) "HeavyTailed":  Design A'' w/ heavy-tailed (here: student-t(5) innovations)
 #   (4) "BlockDiag":    Design B as in KC2015
 #   (5) "NearBand":     Design C as in KC2015
-# 3. Use the following estimation methods (1) Lasso w/ Lasso updating (2)
-#   Post-Lasso w/ post-Lasso updating (3) AIC-Lasso (4) Post-AIC-Lasso (5)
-#   BIC-Lasso (6) Post-BIC-Lasso (7) Sqrt-Lasso (8) Post-Sqrt-Lasso (9) Least
-#   squares w/ Moore-Penrose inverse
-# 4. See if you can store all matrices
-# 5. FIGURE OUT HOW TO EXECUTE FROM SIMS DIRECTORY. sourcing is a pain.
 
 # Clear
 rm(list = ls(all.names = TRUE)) # will clear all (including hidden) objects.
@@ -47,7 +40,7 @@ if (testrun) {
   pvec <- c(4, 8)
   # designs <- c("Diagonal")
   # designs <- c("Diagonal", "BlockDiag")
-  designs <- "Correlated"
+  designs <- "HeavyTailed"
   methods <- c("Lasso", "PostLasso",
                "AICLasso", "PostAICLasso",
                "BICLasso", "PostBICLasso",
@@ -73,7 +66,7 @@ nummet <- length(methods)
 # [x] 1. Generate data depending using (design, n, p)
 # 2. Estimate VAR model using method
 # 3. Store results in a suitable list
-# Start without parallel computing
+# 4. Parallel computing
 
 ## SOME HELPER FUNCTIONS
 
@@ -135,7 +128,7 @@ max_row_sparsities <- array(NA, dim = c(nummc, numn, nump, numdes, nummet))
 dimnames(max_row_sparsities) <- list(mc = 1:nummc, n = nvec, p = pvec,
                                      design = designs, method = methods)
 
-intercept <- FALSE
+intercept <- FALSE # whether to include intercept in simulations
 
 ## MAIN SIMULATION LOOP
 for (this_design in seq_along(designs)) {
@@ -245,12 +238,16 @@ stopCluster(cl)
 #
 # max_ell2_errors[, , , design = "Diagonal", method = "SqrtLasso"]
 # #
-# max_ell2_errors[, 1, 1, design = "Diagonal", method = c("Lasso", "SqrtLasso")]
+max_ell2_errors[, 2, 1, design = "HeavyTailed",
+                method = c("Lasso", "BICLasso", "SqrtLasso")]
+max_ell2_errors[, 1, 1, design = "Diagonal",
+                method = methods]
 # max_ell2_errors[, 2, 1, design = "Diagonal", method = c("Lasso", "SqrtLasso")]
 # max_ell2_errors[, 1, 1, design = "Diagonal", method = c("PostLasso", "PostSqrtLasso")]
-max_ell2_errors[, 1, 1, design = "Correlated", method = c("Lasso", "SqrtLasso")]
-max_ell2_errors[, 2, 1, design = "Correlated", method = c("Lasso", "SqrtLasso")]
+# max_ell2_errors[, 1, 1, design = "Correlated", method = c("Lasso", "SqrtLasso")]
+# max_ell2_errors[, 2, 1, design = "Correlated", method = c("Lasso", "SqrtLasso")]
 # max_ell2_errors[, , , design = "BlockDiag", method = "SqrtLasso"]
+
 
 # max_ell2_errors[, , , design = "Diagonal", method = "HQICLasso"]
 
