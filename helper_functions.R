@@ -362,7 +362,6 @@ sqrt_lasso <- function(x, y, lambda, max_iter = 100, rel_tol_norm = 1e-4) {
   # Ridge matrix for the initial beta estimate
   ridge_matrix <- diag(x = lambda, nrow = p)
   beta <- solve(crossprod(x) + ridge_matrix, crossprod(x, y))
-  # beta <- as.matrix(beta)
   # Precompute quantities for the algorithm
   iter <- 0
   xx <- crossprod(x) / n
