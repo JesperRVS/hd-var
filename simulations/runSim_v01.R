@@ -15,8 +15,6 @@ invisible(gc()) #free up memory
 
 # Packages for parallel computing
 libpar <- c("doRNG", "doParallel", "foreach")
-# libpar <- c("foreach", "iterators", "parallel", "doParallel")
-# c("formattable", "latex2exp", "stringr")
 # Auto-installer (checks if installed - if not, installs and loads)
 using <- function(...) {
   libs <- unlist(list(...))
@@ -232,49 +230,11 @@ for (this_design in seq_along(designs)) {
   } # n loop
 } # design loop
 stopCluster(cl)
-# matrix(max_ell2_errors, nrow = nummc, ncol = nummet)
-# matrix(max_row_sparsities, nrow = nummc, ncol = nummet)
 
-#
-# max_ell2_errors[, , , design = "Diagonal", method = "SqrtLasso"]
-# #
 max_ell2_errors[, 2, 1, design = "HeavyTailed",
                 method = c("Lasso", "BICLasso", "SqrtLasso")]
 max_ell2_errors[, 1, 1, design = "Diagonal",
                 method = methods]
-# max_ell2_errors[, 2, 1, design = "Diagonal", method = c("Lasso", "SqrtLasso")]
-# max_ell2_errors[, 1, 1, design = "Diagonal", method = c("PostLasso", "PostSqrtLasso")]
-# max_ell2_errors[, 1, 1, design = "Correlated", method = c("Lasso", "SqrtLasso")]
-# max_ell2_errors[, 2, 1, design = "Correlated", method = c("Lasso", "SqrtLasso")]
-# max_ell2_errors[, , , design = "BlockDiag", method = "SqrtLasso"]
 
-
-# max_ell2_errors[, , , design = "Diagonal", method = "HQICLasso"]
-
-# # #
-# source("simulations/simData.R")
-# n <- 1000
-# p <- 4
-# data <- sim_data_by_design(n = n, p = p, design = "Diagonal", nburn = 100)
-# source("sqrtLassoVAR.R")
-# q <- 1
-# pq <- p * q
-# fit_sqrtl <- sqrt_lasso_var(data = data, q = q, post = FALSE, intercept = FALSE)
-
-
-# x <- data[1:n, ]
-# y <- data[(q + 1):(q + n), 1]
-# c0 <- 1.1
-# gamma <- 0.1 / log(max(c(n, p * q)))
-# lambda_star_sqrt <- c0 * sqrt(n) * qnorm(1 - gamma / (2 * p * q))
-# fit_sqrtl <- sqrt_lasso(x, y, lambda = lambda_star_sqrt)
-# fit_sqrtl
-# ridge_matrix <- diag(x = lambda_star_sqrt, nrow = p)
-# solve(crossprod(x) + ridge_matrix, crossprod(x, y))
-
-# n^2 * diag(crossprod(x)/n)
-# lambda_star_sqrt^2
-
-# matrix(colMeans(x^2), p, pq, byrow = TRUE)
 
 
