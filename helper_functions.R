@@ -216,53 +216,326 @@ mult_lasso <- function(x, y, lambda_glmnet, upsilon = NULL,
       that[i, ] <- that_i_temp / upsilon[i, ]           # original scale
     }
   }
-  return(that) # return as sparse matrix
+  return(that) # return as matrix
 }
-## OLD VERSION BELOW ##
-# # Multiple responses weighted LASSO using same regressors
-# # INPUTS
-# #   x: n x pq matrix of predictors
-# #   y: n x p matrix of responses
-# #   lambda_glmnet: penalty level in eyes of glmnet
-# #   upsilon: p x pq matrix of penalty loadings
-# #   full_path: logical; if TRUE, use full path of lambda values
-# #   tol_glmnet: convergence tolerance for glmnet
-# # OUTPUT
-# #   that: p x pq matrix of estimates
-# mult_lasso <- function(x, y, lambda_glmnet, upsilon = NULL,
-#                        full_path = FALSE, tol_glmnet = 1e-4) {
-#   if (missing(x) || missing(y) || missing(lambda_glmnet)) {
-#     stop("Not enough input arguments.")
+
+#' Multivariate Lasso with Belloni, Chernozhukov, Chen, Hansen Adjustment
+#'
+#' This function performs multivariate Lasso regression with adjustments based
+#' on the methodology proposed by Belloni, Chernozhukov, Chen, and Hansen (2012).
+#'
+#' @param x A matrix of predictor variables.
+#' @param y A matrix of response variables.
+#' @param post Logical, indicating if post-selection refitting is to be
+#'   performed. Default is TRUE.
+#' @param intercept Logical, indicating if intercepts should be included.
+#'   Default is TRUE.
+#' @param c A numeric value controlling the penalty level. Default is 1.1.
+#' @param gamma Probability tolerance for the penalty. Default is NULL.
+#' @param k An integer indicating the maximum number of iterations for
+#'   updating. Default is 15.
+#' @param tol_ups Tolerance for the relative change in penalty loadings.
+#'   Default is 1e-3.
+#' @param warn Logical, indicating if a warning should be issued if the maximum
+#'   number of iterations is reached. Default is TRUE.
+#' @param full_path Logical, indicating if the full solution path should be
+#'   returned. Default is FALSE.
+#' @param tol_glmnet Tolerance for the glmnet fitting procedure. Default is
+#'   1e-4.
+#' @return A list containing the following elements:
+#'   \item{lambda}{Penalty level used.}
+#'   \item{ups_init}{Initial penalty loadings.}
+#'   \item{ups_refi}{Refined penalty loadings path.}
+#'   \item{ups}{Final penalty loadings.}
+#'   \item{intr_init}{Initial intercepts.}
+#'   \item{intr_refi}{Refined intercepts path.}
+#'   \item{intr}{Final intercepts.}
+#'   \item{that_init}{Initial estimates.}
+#'   \item{that_refi}{Refined estimates path.}
+#'   \item{that}{Final estimates.}
+#'   \item{full_rank_post_init}{Full rank flags after initial estimation.}
+#'   \item{full_rank_post_refi}{Full rank flags after refined estimation.}
+#'   \item{k_term}{Number of updates performed.}
+#'   \item{rel_diff_ups_term}{Relative change in loadings at termination.}
+#'   \item{rel_diffs_ups}{Relative changes in loadings along the path.}
+#' @references
+#' Belloni, A., Chernozhukov, V., Chen, D., & Hansen, C. (2012).
+#' Sparse models and methods for optimal instruments with an application to 
+#' eminent domain. Econometrica, 80(6), 2369-2429.
+#' https://doi.org/10.3982/ECTA9626
+#'
+#' @examples
+#' x <- matrix(rnorm(100 * 20), 100, 20)
+#' y <- matrix(rnorm(100 * 5), 100, 5)
+#' result <- mult_lasso_bcch(x, y)
+#' @export
+mult_lasso_bcch <- function(x, y, post = TRUE, intercept = TRUE, c = 1.1,
+                            gamma = NULL, k = 15, tol_ups = 1e-3, warn = TRUE,
+                            full_path = FALSE, tol_glmnet = 1e-4) {
+  if (missing(x) || missing(y)) {
+    stop("Not enough inputs. Provide both x and y.")
+  }
+  if (nrow(x) != nrow(y)) {
+    stop("Number of observations (rows in x and y) do not match.")
+  }
+  n <- nrow(x)      # number of observations
+  nx <- ncol(x)     # number of predictor variables
+  ny <- ncol(y)     # number of response variables
+
+  # Set default probability tolerance if not provided
+  if (is.null(gamma)) {
+    gamma <- 0.1 / log(max(c(n, nx)))
+  }
+
+  # Penalty level based on Belloni, Chernozhukov, Chen, Hansen (2012 ECTA)
+  lambda_star <- 2 * c * sqrt(n) * qnorm(1 - gamma / (2 * nx * ny))
+  lambda_glmnet <- lambda_star / (2 * n) # penalty for glmnet
+
+  # If intercepts are requested, demean the data before proceeding
+  if (intercept) {
+    ybar <- colMeans(y)     # mean of response variables
+    xbar <- colMeans(x)     # mean of predictor variables
+    y <- sweep(y, 2, ybar)  # demean responses
+    x <- sweep(x, 2, xbar)  # demean predictors
+    ybar <- as.matrix(ybar) # response means as matrix
+    xbar <- as.matrix(xbar) # predictor means as matrix
+  }
+  # Note: Means are stored to back out intercepts later
+
+  # Initial penalty loadings and estimates
+  ups_init <- sqrt((1 / n) * crossprod(y^2, x^2))
+  that_init <- mult_lasso(x, y, lambda_glmnet, upsilon = ups_init,
+                          full_path = full_path, tol_glmnet = tol_glmnet)
+  if (post) {
+    refit <- mult_refit(x, y, that_init) # refit initial estimates
+    that_init <- refit$that
+    full_rank_post_init <- refit$full_rank
+  } else {
+    full_rank_post_init <- NULL
+  }
+  if (intercept) {
+    intr_init <- ybar - that_init %*% xbar # back out intercepts
+  } else {
+    intr_init <- NULL
+  }
+
+  # Update penalty loadings and estimates iteratively
+  ups_refi <- array(NA, dim = c(ny, nx, k))  # refined penalty loadings
+  that_refi <- array(NA, dim = c(ny, nx, k)) # refined estimates
+  rel_diffs_ups <- numeric(k)                # relative changes in loadings
+  if (post) {
+    full_rank_post_refi <- matrix(NA, ny, k) # full rank flags
+  } else {
+    full_rank_post_refi <- NULL
+  }
+  if (intercept) {
+    intr_refi <- matrix(NA, ny, k) # placeholder for intercepts
+  } else {
+    intr_refi <- NULL
+  }
+  for (l in 1:k) {
+    if (l == 1) {
+      that_old <- that_init # use initial estimates for first iteration
+    } else {
+      that_old <- that_refi[, , l - 1] # use previous estimates for others
+    }
+    res_old <- y - x %*% t(that_old) # calculate residuals
+    ups_new <- sqrt((1 / n) * crossprod(res_old^2, x^2)) # update penalty load.
+    ups_refi[, , l] <- ups_new # store updated penalty loadings
+    that_new <- mult_lasso(x, y, lambda_glmnet, ups_new, tol_glmnet) # new est.
+    if (post) {
+      refit <- mult_refit(x, y, that_new) # refit new estimates
+      that_new <- refit$that
+      full_rank_post_refi[, l] <- refit$full_rank
+    }
+    that_refi[, , l] <- that_new # store new estimates
+    if (intercept) {
+      intr_refi[, l] <- ybar - that_new %*% xbar # back out intercepts
+    }
+    if (l == 1) {
+      ups_old <- ups_init # compare with initial penalty loadings
+    } else {
+      ups_old <- ups_refi[, , l - 1] # compare with previous penalty loadings
+    }
+    diff_ups <- ups_new - ups_old # change in penalty loadings
+    rel_diff_ups <- sqrt(sum(diff_ups^2)) /
+      (sqrt(sum(ups_old^2)) + .Machine$double.eps) # relative change
+    rel_diffs_ups[l] <- rel_diff_ups # store relative change
+    if (rel_diff_ups <= tol_ups) {
+      break # stop if change is small enough
+    }
+  }
+  ups <- ups_refi[, , l] # set refined penalty loadings
+  if (intercept) {
+    intr <- intr_refi[, l] # set intercepts
+  } else {
+    intr <- NULL
+  }
+  that <- that_refi[, , l] # set estimates
+
+  # Optional warning if maximum updates reached without convergence
+  if (warn && l == k && rel_diff_ups > tol_ups) {
+    warning("Maximum number of updates reached. Consider increasing K.")
+    cat(sprintf("Relative change in penalty loadings is %3.1g percent\n",
+                100 * rel_diff_ups))
+  }
+
+  # Return results as a list
+  fit <- list(
+    lambda = lambda_star,
+    ups_init = ups_init,
+    ups_refi = ups_refi[, , 1:l],
+    ups = ups,
+    intr_init = intr_init,
+    intr_refi = intr_refi[, 1:l],
+    intr = intr,
+    that_init = that_init,
+    that_refi = that_refi[, , 1:l],
+    that = that,
+    full_rank_post_init = full_rank_post_init,
+    full_rank_post_refi = full_rank_post_refi[, 1:l],
+    k_term = l,
+    rel_diff_ups_term = rel_diff_ups,
+    rel_diffs_ups = rel_diffs_ups[1:l]
+  )
+  return(fit)
+}
+
+# mult_lasso_bcch <- function(x, y, post = TRUE, intercept = TRUE, c = 1.1,
+#                             gamma = NULL, k = 15, tol_ups = 1e-3, warn = TRUE,
+#                             full_path = FALSE, tol_glmnet = 1e-4) {
+#   if (missing(x) || missing(y)) {
+#     stop("Not enough inputs. Provide both x and y.")
 #   }
-#   pq <- ncol(x)  # columns in x = pq = total number of regressors
-#   p <- ncol(y)   # q = autoregressive order, p = dim(output)
 #   if (nrow(x) != nrow(y)) {
 #     stop("Number of observations (rows in x and y) do not match.")
 #   }
-#   if (is.null(upsilon)) {
-#     upsilon <- matrix(1, p, pq) # default to unit loadings
+#   n <- nrow(x)      # number of observations
+#   nx <- ncol(x)   # columns in x, total number of regressors
+#   ny <- ncol(y)   # number of response variables
+
+#   # Probability tolerance
+#   if (is.null(gamma)) {
+#     gamma <- 0.1 / log(max(c(n, nx)))
 #   }
-#   that <- matrix(NA, p, pq) # placeholder for estimates
-#   if (full_path == FALSE) { # if full path *not* requested (= default)...
-#     for (i in 1:p) {        # use glmnet w/ single lambda
-#       xtilde <- sweep(x, 2, upsilon[i, ], FUN = "/")  # rescale using loadings
-#       fit_i <- glmnet(xtilde, y[, i], family = "gaussian",
-#                       standardize = FALSE, intercept = FALSE,
-#                       lambda = lambda_glmnet, thresh = tol_glmnet)
-#       that[i, ] <- coef(fit_i)[-1] / upsilon[i, ] # original scaling
+
+#   # Penalty level in the eyes of Belloni, Chernozhukov, Chen, Hansen (2012 ECTA)
+#   lambda_star <- 2 * c * sqrt(n) * qnorm(1 - gamma / (2 * nx * ny))
+#   lambda_glmnet <- lambda_star / (2 * n) # penalty in eyes of glmnet
+
+#   # If intercepts requested, demean before proceeding
+#   if (intercept) {
+#     ybar <- colMeans(y)     # response means as p-dim array
+#     xbar <- colMeans(x)     # predictor means as pq-dim array
+#     y <- sweep(y, 2, ybar)  # demean responses
+#     x <- sweep(x, 2, xbar)  # demean predictors
+#     ybar <- as.matrix(ybar) # response means as p x 1 matrix
+#     xbar <- as.matrix(xbar) # predictor means as pq x 1 matrix
+#   }
+#   # Note: Means are stored to back out intercepts later
+
+#   # ESTIMATION
+#   # INITIAL STEP (k = 0)
+#   # Initial penalty loadings and estimates
+#   ups_init <- sqrt((1 / n) * crossprod(y^2, x^2))
+#   that_init <- mult_lasso(x, y, lambda_glmnet, upsilon = ups_init,
+#                           full_path = full_path, tol_glmnet = tol_glmnet)
+#   if (post) {                               # if refitting requested...
+#     refit <- mult_refit(x, y, that_init)    # refit initial estimates
+#     that_init <- refit$that                 # overwrite (keeping zeros)
+#     full_rank_post_init <- refit$full_rank  # flag full rank
+#   } else { # if no refitting requested...
+#     full_rank_post_init <- NULL # then rank deficiency is irrelevant
+#   }
+#   if (intercept) { # if intercepts requested...
+#     intr_init <- ybar - that_init %*% xbar # back them out
+#   } else {
+#     intr_init <- NULL # no intercepts requested
+#   }
+
+#   # UPDATING (up to K times)
+#   # Stop if relative change in penalty loadings is small enough
+#   # Create placeholders
+#   ups_refi <- array(NA, dim = c(ny, nx, k))  # refined penalty loadings
+#   that_refi <- array(NA, dim = c(ny, nx, k)) # and estimates
+#   rel_diffs_ups <- numeric(k)               # relative changes in loadings
+#   if (post) { # if refitting requested...
+#     full_rank_post_refi <- matrix(NA, ny, k) # flag full rank
+#   } else { # o/w don't
+#     full_rank_post_refi <- NULL
+#   }
+#   if (intercept) { # if intercepts requested...
+#     intr_refi <- matrix(NA, , k) # create placeholder
+#   } else {
+#     intr_refi <- NULL # o/w don't
+#   }
+#   for (l in 1:k) {                       # start updating
+#     if (l == 1) {                        # if first iteration...
+#       that_old <- that_init              # use initial estimates
+#     } else {
+#       that_old <- that_refi[, , l - 1]   # o/w use previous (refined) estimates
 #     }
-#   } else {            # if full path requested (not default)...
-#     for (i in 1:p) {  # use glmnet's lambda sequence and interpolate
-#       xtilde <- sweep(x, 2, upsilon[i, ], FUN = "/")  # rescale using loadings
-#       fit_i <- glmnet(xtilde, y[, i], family = "gaussian",
-#                       standardize = FALSE, intercept = FALSE,
-#                       thresh = tol_glmnet)
-#       # ^-- glmnet constructs its own lambda sequence
-#       that_i_temp <- coef(fit_i, s = lambda_glmnet)[-1] # interpolate
-#       that[i, ] <- that_i_temp / upsilon[i, ]           # original scale
+#     res_old <- y - x %*% t(that_old) # implied residuals
+#     ups_new <- sqrt((1 / n) * crossprod(res_old^2, x^2)) # update penalty load.
+#     ups_refi[, , l] <- ups_new # store
+#     that_new <- mult_lasso(x, y, lambda_glmnet, ups_new, tol_glmnet) # estimates
+#     if (post) {                            # if refitting requested...
+#       refit <- mult_refit(x, y, that_new)  # refit estimates
+#       that_new <- refit$that               # overwrite (keeping zeros)
+#       full_rank_post_refi[, l] <- refit$full_rank # flag full rank
+#     }
+#     that_refi[, , l] <- that_new           # store
+#     if (intercept) {                       # if intercepts requested...
+#       intr_refi[, l] <- ybar - that_new %*% xbar  # back them out
+#     }
+#     if (l == 1) {          # if at first update...
+#       ups_old <- ups_init  # then compare w/ initial penalty loadings
+#     } else {               # o/w compare w/ previous (refined) penalty loadings
+#       ups_old <- ups_refi[, , l - 1]
+#     }
+#     diff_ups <- ups_new - ups_old # change in penalty loadings
+#     # relative change in vectorized ell_2 norm --v
+#     rel_diff_ups <- sqrt(sum(diff_ups^2)) /
+#       (sqrt(sum(ups_old^2)) + .Machine$double.eps)
+#     rel_diffs_ups[l] <- rel_diff_ups # store
+#     if (rel_diff_ups <= tol_ups) { # if change is small enough...
+#       break # stop updating
 #     }
 #   }
-#   return(that) # return as sparse matrix
+#   ups <- ups_refi[, , l] # set refined penalty loadings
+#   if (intercept) {       # if intercepts requested...
+#     intr <- intr_refi[, l] # set intercepts
+#   } else { # o/w don't
+#     intr <- NULL
+#   }
+#   that <- that_refi[, , l] # set estimates
+
+#   # OPTIONAL WARNING
+#   if (warn && l == k && rel_diff_ups > tol_ups) { # if max updates reached...
+#     warning("Maximum number of updates reached. Consider increasing K.")
+#     cat(sprintf("Relative change in penalty loadings is %3.1g percent\n", 
+#                 100 * rel_diff_ups))
+#   }
+
+#   # OUTPUT
+#   fit <- list( # store results in list
+#     lambda = lambda_star,               # penalty level used
+#     ups_init = ups_init,                # initial penalty loadings
+#     ups_refi = ups_refi[, , 1:l],       # refined penalty loadings path
+#     ups = ups,                          # final penalty loadings
+#     intr_init = intr_init,              # initial intercepts
+#     intr_refi = intr_refi[, 1:l],       # refined intercepts path
+#     intr = intr,                        # final intercepts
+#     that_init = that_init,              # initial estimates
+#     that_refi = that_refi[, , 1:l],     # refined estimates path
+#     that = that,                        # final estimates
+#     full_rank_post_init = full_rank_post_init, # full rank flags
+#     full_rank_post_refi = full_rank_post_refi[, 1:l], # (if requested)
+#     k_term = l,                         # number of updates performed
+#     rel_diff_ups_term = rel_diff_ups,   # rel change in loadings at termination
+#     rel_diffs_ups = rel_diffs_ups[1:l]  # rel changes in loadings along path
+#   )
+#   return(fit) # return list
 # }
 
 ## == INFORMATION CRITERIA FUNCTIONS == ##
