@@ -267,6 +267,7 @@ mult_lasso <- function(x, y, lambda_glmnet, upsilon = NULL,
 #' x <- matrix(rnorm(100 * 20), 100, 20)
 #' y <- matrix(rnorm(100 * 5), 100, 5)
 #' result <- mult_lasso_bcch(x, y)
+#' 
 #' @export
 mult_lasso_bcch <- function(x, y, post = TRUE, intercept = TRUE, c = 1.1,
                             gamma = NULL, k = 15, tol_ups = 1e-3, warn = TRUE,
