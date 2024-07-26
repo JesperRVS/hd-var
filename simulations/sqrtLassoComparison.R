@@ -11,7 +11,8 @@ library("foreach")
 n <- 1000
 p <- 2
 s <- 1
-mvec <- seq(0, 10, by = 1)
+# mvec <- seq(0, 5, by = 1)
+mvec <- seq(0, 3, by = 0.2)
 numm <- length(mvec) # number of m values (= DGPs)
 
 # ESTIMATE COEFFICIENTS
@@ -30,7 +31,7 @@ iseed <- 2345
 cl <- makeCluster(detectCores())
 registerDoParallel(cl)
 clusterSetRNGStream(cl, iseed = iseed)
-nummc <- 2000
+nummc <- 1000
 
 # Placeholders for the results
 ell2_errors <- array(NA, dim = c(nummet, nummc, numm))
@@ -133,7 +134,28 @@ file_name <- paste0("ell2_errors_2_regressor_heterosked_sqrtLasso_comparison_n",
 
 ggsave(file_name, plot = p2, width = 10, height = 5)
 
+# Same blot but for the relative maximum ell2 errors
+ell2_max <- apply(ell2_errors, c(1, 3), max)
 
+ell2_max_rel <- sweep(ell2_max[-1, ], 2, ell2_max[1, ], "/")
+df <- reshape::melt(ell2_max_rel[-1, ])
+p3 <- ggplot(df, aes(x = m, y = value, colour = method)) +
+  geom_line() +
+  geom_point() +
+  theme_minimal() +
+  theme(legend.position = "bottom") +
+  labs(x = "m", y = "Maximum ell2 error relative to SqrtLasso") +
+  ggtitle("Maximum ell2 errors relative to SqrtLasso for feasible and ideal Lassos") +
+  geom_hline(yintercept = 1, linetype = "dashed", colour = "black") +
+  annotate("text", x = 0, y = 1.1, label = "SqrtLasso", hjust = 0, vjust = 0) +
+  scale_x_continuous(breaks = mvec, minor_breaks = NULL)
+p3
+
+# save the plot as pdf
+file_name <- paste0("ell2_errors_2_regressor_heterosked_sqrtLasso_comparison_n", n,
+                    "_p", p, "_maximum.pdf")
+
+ggsave(file_name, plot = p3, width = 10, height = 5)
 
 # # Plot the average ell2 errors of LassoIdeal alone relative to that of SqrtLasso
 # library("ggplot2")
