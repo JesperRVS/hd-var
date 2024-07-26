@@ -1,8 +1,7 @@
 ## == Dependencies == ##
-library("glmnet", "MASS", "Matrix")
+library("glmnet", "Matrix")
 # Notes:
 #   glmnet is used for LASSO estimation
-#   MASS is used for Moore-Penrose pseudoinverse (ginv)
 #   Matrix is used for rankMatrix
 
 ## == DATA PROCESSING FUNCTIONS == ##
