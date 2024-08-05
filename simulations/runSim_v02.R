@@ -1,10 +1,7 @@
 ## TODO:
-# Use 5 designs 
-#   (1) "Diagonal":     Design A as in KC2015
-#   (2) "Correlated":   Design A' w/ strongly correlated innovations (hence outcomes)
-#   (3) "HeavyTailed":  Design A'' w/ heavy-tailed (here: student-t(5) innovations)
-#   (4) "BlockDiag":    Design B as in KC2015
-#   (5) "NearBand":     Design C as in KC2015
+# - Add heteroskedastic design
+# - Another testrun
+# - Go server
 
 # Clear
 rm(list = ls(all.names = TRUE)) # will clear all (including hidden) objects.
@@ -57,14 +54,7 @@ nump <- length(pvec)
 numdes <- length(designs)
 nummet <- length(methods)
 
-# TODO:
-# [x] 0. Write function which takes (design, n, p) as input and generates data
-# [x] 1. Generate data depending using (design, n, p)
-# [x] 2. Estimate VAR model using method
-# [x] 3. Store results in a suitable list
-# [x] 4. Parallel computing
-
-## SOME HELPER FUNCTIONS
+## == SOME HELPER FUNCTIONS == ##
 
 q_switch <- function(design) {
   q <- list(Diagonal = 1, Correlated = 1, HeavyTailed = 1,
@@ -103,9 +93,11 @@ max_row_sparsity <- function(mat) {
   return(max_sparsity)
 }
 
+## == SIMULATIONS == ##
+
 # Monte Carlo (MC) settings
 RNGkind(normal.kind = "Kinderman-Ramage") # faster normal draws
-iseed <- 2345
+iseed <- 2345 # set seed for reproducibility
 # registerDoRNG(seed = iseed)
 cl <- makeCluster(detectCores())
 registerDoParallel(cl)
@@ -126,7 +118,7 @@ dimnames(max_row_sparsities) <- list(mc = 1:nummc, n = nvec, p = pvec,
 
 intercept <- FALSE # whether to include intercept in simulations
 
-## MAIN SIMULATION LOOP
+
 for (this_design in seq_along(designs)) {
   design <- designs[this_design]
   q <- q_switch(design) # set lag length q (correctly)
@@ -144,82 +136,74 @@ for (this_design in seq_along(designs)) {
         # ESTIMATE VAR MODEL
         errors <- numeric(nummet)
         shats <- numeric(nummet)
-        # LASSO
+
+        # 1-2. LASSO AND POST-LASSO
+        # 1. LASSO
         source("lassoVAR.R", local = TRUE) # for lasso_var
         fit_lasso <- lasso_var(data = data, q = q,
                                post = FALSE, intercept = intercept)
         that_lasso <- fit_lasso$that
         errors[1] <- max_ell2_row(that_lasso - theta)
         shats[1] <- max_row_sparsity(that_lasso)
-        # print("lasso done")
-        # POST-LASSO
+        # 2. POST-LASSO
         fit_postl <- lasso_var(data = data, q = q,
                                post = TRUE, intercept = intercept)
         that_postl <- fit_postl$that
         errors[2] <- max_ell2_row(that_postl - theta)
         shats[2] <- max_row_sparsity(that_postl)
-        # print("postlasso done")
-        # IC-LASSOS AND POST-IC-LASSOS
-        # IC-LASSOS
+
+        # 3-8. IC-LASSOS AND POST-IC-LASSOS
+        # 3/5/7. IC-LASSOS
         source("icLassoVAR.R", local = TRUE) # for ic_lasso_var
         fit_ics <- ic_lasso_var(data = data, q = q,
                                 crit = c("aic", "bic", "hqic"),
                                 post = FALSE, intercept = intercept)
-        # AIC
+        # 3. AIC
         that_aic <- fit_ics$thats[, , 1]
         errors[3] <- max_ell2_row(that_aic - theta)
         shats[3] <- max_row_sparsity(that_aic)
-        # print("aiclasso done")
-        # BIC
+        # 5. BIC
         that_bic <- fit_ics$thats[, , 2]
         errors[5] <- max_ell2_row(that_bic - theta)
         shats[5] <- max_row_sparsity(that_bic)
-        # print("biclasso done")
-        # HQIC
+        # 7. HQIC
         that_hqic <- fit_ics$thats[, , 3]
         errors[7] <- max_ell2_row(that_hqic - theta)
         shats[7] <- max_row_sparsity(that_hqic)
-        # print("hqiclasso done")
-        # POST-IC-LASSOS
+        # 4/6/8. POST-IC-LASSOS
         fit_postics <- ic_lasso_var(data = data, q = q,
                                     crit = c("aic", "bic", "hqic"),
                                     post = TRUE, intercept = intercept)
-        # POST-AIC
+        # 4. POST-AIC
         that_postaic <- fit_postics$thats[, , 1]
         errors[4] <- max_ell2_row(that_postaic - theta)
         shats[4] <- max_row_sparsity(that_postaic)
-        # print("postaiclasso done")
-        # POST-BIC
+        # 6. POST-BIC
         that_postbic <- fit_postics$thats[, , 2]
         errors[6] <- max_ell2_row(that_postbic - theta)
         shats[6] <- max_row_sparsity(that_postbic)
-        # print("postbiclasso done")
-        # POST-HQIC
+        # 8. POST-HQIC
         that_posthqic <- fit_postics$thats[, , 3]
         errors[8] <- max_ell2_row(that_posthqic - theta)
         shats[8] <- max_row_sparsity(that_posthqic)
-        # source("sqrtLassoVAR.R", local = TRUE)
-        # print("posthqiclasso done")
-        # SQRT-LASSO
+
+        # 9-10. SQRT-LASSO AND POST-SQRT-LASSO
+        # 9. SQRT-LASSO
         source("sqrtLassoVAR.R", local = TRUE) # for sqrt_lasso_var
         fit_sqrtl <- sqrt_lasso_var(data = data, q = q,
                                     post = FALSE, intercept = intercept)
-                                    # upsilon = matrix(1, p, p * q))
         that_sqrtl <- fit_sqrtl$that
         errors[9] <- max_ell2_row(that_sqrtl - theta)
         shats[9] <- max_row_sparsity(that_sqrtl)
-        # print("sqrtlasso done")
-        # POST-SQRT-LASSO
+        # 10. POST-SQRT-LASSO
         fit_postsqrtl <- sqrt_lasso_var(data = data, q = q,
                                         post = TRUE, intercept = intercept)
-                                        # upsilon = matrix(1, p, p * q))
         that_postsqrtl <- fit_postsqrtl$that
         errors[10] <- max_ell2_row(that_postsqrtl - theta)
         shats[10] <- max_row_sparsity(that_postsqrtl)
-        # print("postsqrtlasso done")
-
         list(errors, shats) # return results as list
       } # mc loop
+      # Extract maximum rowwise ell_2 errors and row sparsities, respectively
       max_ell2_errors[, thisn, thisp, this_design, ] <-
         t(sapply(lapply(results, "[[", 1), unlist))
       max_row_sparsities[, thisn, thisp, this_design, ] <-
@@ -229,39 +213,9 @@ for (this_design in seq_along(designs)) {
 } # design loop
 stopCluster(cl)
 
-# average over the MC repetitions
-avg_max_ell2_errors <- apply(max_ell2_errors, c(2, 3, 4, 5), mean)
-
-# plot the average ell_2 errors as a function of n on the first axis, and a line for each p
-# for the methods Lasso, BICLasso, and SqrtLasso (horizontal facets for the methods)
-# and each design as a facet (vertical facets for the designs)
-met_plt <- c("Lasso", "PostLasso", "BICLasso", "SqrtLasso")
-nummet_plt <- length(met_plt)
-where_met_plt <- numeric(nummet_plt)
-for (thismet in 1:nummet_plt) {
-  where_met_plt[thismet] <- which(methods == met_plt[thismet])
-}
-df <- reshape::melt(avg_max_ell2_errors[, , , method = where_met_plt])
-library("ggplot2")
-p_mean <- ggplot(df, aes(x = n, y = value, color = as.factor(p))) +
-  geom_line(linewidth = 0.5) +
-  geom_point(size = 2) +
-  facet_grid(rows = vars(design), cols = vars(method)) +
-  ylab("Average Maximum Rowwise Estimation Error") +
-  theme_bw()
-p_mean
-
-# create a file name where I include the number of MC repetitions into the string
-# Also include the range of p and n
-file_name <- paste("mean_max_ell2_errors_", nummc, "_MC_", min(nvec), "_to_", max(nvec),
-                   "_n_", min(pvec), "_to_", max(pvec), "_p", sep = "")
-ggsave(p_mean, filename = paste0("simulations/img/", file_name, ".pdf"),
-       width = 8, height = 12)
-
 # Save the workspace
-# create a file name to save the entire workspace where I include the number of MC repetitions into the string
-# Also include the range of p and n
-file_name <- paste("simulations_workspace_", nummc, "_MC_", min(nvec), "_to_", max(nvec),
+file_name <- paste("simulations_workspace_", nummc, "_MC_",
+                   min(nvec), "_to_", max(nvec),
                    "_n_", min(pvec), "_to_", max(pvec), "_p", sep = "")
 
 save.image(file = paste0("simulations/", file_name, ".RData"))
