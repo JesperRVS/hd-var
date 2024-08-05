@@ -103,7 +103,7 @@ cl <- makeCluster(detectCores())
 registerDoParallel(cl)
 clusterSetRNGStream(cl, iseed = iseed)
 if (testrun) {
-  nummc <- 10   # no. MC repetitions
+  nummc <- 100   # no. MC repetitions
 } else {
   nummc <- 2000 # no. MC repetitions
 }
