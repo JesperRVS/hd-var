@@ -47,7 +47,8 @@ sim_data_by_design <- function(n = 100, p = 4, design, sigma_eps = 0.1,
       data <- sim_data_c(n = n, p = p, sigma_eps = sigma_eps, nburn = nburn)
     },
     "Heteroskedastic" = {
-      # todo
+      data <- sim_data_h(n = n, p = p, sigma_eps = sigma_eps, h = 0.1,
+                         nburn = nburn)
     },
     stop("Design not recognized.")
   ) # end switch
@@ -270,4 +271,32 @@ coef_mat_c <- function(p) {
 ## == DESIGN H(ETEROSKEDASTIC) == ##
 
 ## == DESIGN H HELPER FUNCTIONS == ##
-sim_data_h <- function(n = 100)
+stds_eps_ylag <- function(ylag, h) {
+  p <- length(ylag)
+  stds_ylag <- numeric(p)
+  for (i in 1:(p - 1)) {
+    stds_ylag[i] <- exp(- h * abs(ylag[i]) + h * abs(ylag[i + 1]))
+  }
+  stds_ylag[p] <- exp(- h * abs(ylag[p]) + h * abs(ylag[1]))
+  return(stds_ylag)
+}
+
+sim_data_h <- function(n = 100, p = 4, sigma_eps = 0.1, h = 0.1,
+                       nburn = 10000) {
+  n_tot <- nburn + 1 + n
+  yinit <- matrix(0, p, 1)      # p x 1 initial values (zeros)
+  ylong <- matrix(NA, p, n_tot) # p x n_tot outcome matrix
+  ylong[, 1] <- yinit           # initiate from all zeros
+  normals <- matrix(rnorm(p * n_tot), p, n_tot) # p x n_tot std. normals
+  eps <- matrix(NA, p, n_tot)    # p x n_tot indep. innovations
+  # Note: first epsilon not actually in use: kept for simple indexing.
+  theta <- coef_mat_a(p)
+  for (t in 2:n_tot) {
+    stds_ylag <- stds_eps_ylag(ylag = ylong[, t - 1], h = h)
+    eps[, t] <- sigma_eps * stds_ylag * normals[, t]
+    ylong[, t] <- as.matrix(theta %*% ylong[, t - 1] + eps[, t])
+  }
+  # Note: as.matrix used to allow storage
+  y0ton <- t(ylong[, (nburn + 1):n_tot])
+  return(y0ton)
+}
