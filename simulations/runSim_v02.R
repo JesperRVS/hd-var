@@ -33,7 +33,8 @@ if (testrun) {
   pvec <- c(4, 8, 16)
   # designs <- c("Diagonal")
   # designs <- c("Diagonal", "BlockDiag")
-  designs <- c("Diagonal", "Correlated", "HeavyTailed", "BlockDiag", "NearBand")
+  designs <- c("Heteroskedastic")
+  # designs <- c("Diagonal", "Correlated", "HeavyTailed", "BlockDiag", "NearBand")
   methods <- c("Lasso", "PostLasso",
                "AICLasso", "PostAICLasso",
                "BICLasso", "PostBICLasso",
@@ -69,7 +70,8 @@ coef_mat_c <- function(p) {0}
 insertSource("simulations/simData.R",
              functions = c("coef_mat_a", "coef_mat_b", "coef_mat_c"))
 theta_switch <- function(design, p = 4) {
-  if (design %in% c("Diagonal", "Correlated", "HeavyTailed")) {
+  if (design %in% c("Diagonal", "Correlated",
+                    "HeavyTailed", "Heteroskedastic")) {
     theta <- coef_mat_a(p = p)
   } else if (design == "BlockDiag") {
     theta <- coef_mat_b(p = p)
@@ -103,7 +105,7 @@ cl <- makeCluster(detectCores())
 registerDoParallel(cl)
 clusterSetRNGStream(cl, iseed = iseed)
 if (testrun) {
-  nummc <- 100   # no. MC repetitions
+  nummc <- 10   # no. MC repetitions
 } else {
   nummc <- 2000 # no. MC repetitions
 }
@@ -128,11 +130,14 @@ for (this_design in seq_along(designs)) {
       p <- pvec[thisp]
       theta <- theta_switch(design, p = p)
       print(paste("Design:", design, ", n:", n, ", p:", p))
-      results <- foreach(icount(nummc)) %dopar% {
+      results <- foreach(icount(nummc)) %do% {
         # GENERATE DATA
+        print("here")
         source("simulations/simData.R", local = TRUE)
         data <- sim_data_by_design(n = n, p = p, design = design,
                                    nburn = nburn)
+        print(dim(data))
+        print("here?")
         # ESTIMATE VAR MODEL
         errors <- numeric(nummet)
         shats <- numeric(nummet)
@@ -214,7 +219,7 @@ for (this_design in seq_along(designs)) {
 stopCluster(cl)
 
 # Save the workspace
-file_name <- paste("simulations_workspace_", nummc, "_MC_",
+file_name <- paste("simulations_workspace_heteroskedastic_", nummc, "_MC_",
                    min(nvec), "_to_", max(nvec),
                    "_n_", min(pvec), "_to_", max(pvec), "_p", sep = "")
 
