@@ -45,14 +45,18 @@ sim_data_by_design <- function(n = 100, p = 4, design, sigma_eps = 0.1,
     # Near-band design w/ independent Gaussian innovations
     "NearBand" = {
       data <- sim_data_c(n = n, p = p, sigma_eps = sigma_eps, nburn = nburn)
-    }
+    },
+    "Heteroskedastic" = {
+      # todo
+    },
+    stop("Design not recognized.")
   ) # end switch
   return(data)
 }
 
 ### == DESIGNS == ###
 
-## DESIGN A ##
+## == DESIGN A == ##
 # Simulate data using variations of Kock & Callot's [2015 J Economet]
 # Experimental Design A.
 
@@ -126,7 +130,8 @@ sim_eps <- function(n = 100, p = 4, family = "gaussian",
       nrmlzr <- sqrt(df / (df - 2))                 # normalizing constant
       students <- matrix(rt(n * p, df), n, p)       # n x p indep. t(df) dist
       eps <- (sigma_eps / nrmlzr) * students        # => var = sigma_eps^2
-    }
+    },
+    stop("Family not recognized.")
   )
   return(eps)
 }
@@ -150,7 +155,7 @@ cor_mat <- function(p, rho) {
   return(sigma)
 }
 
-## DESIGN B ##
+## == DESIGN B == ##
 
 # Simulate using essentially Kock & Callot [2015] Experimental Design B.
 
@@ -188,7 +193,7 @@ sim_data_b <- function(n = 100, p = 4, sigma_eps = 0.1, nburn = 10000) {
   return(yminus3ton)
 }
 
-## DESIGN B HELPER FUNCTIONS ##
+## == DESIGN B HELPER FUNCTIONS == ##
 
 # Coefficient matrix for the VAR(4) process
 # INPUT:
@@ -210,7 +215,7 @@ coef_mat_b <- function(p) {
   return(theta)
 }
 
-## DESIGN C ##
+## == DESIGN C == ##
 
 # Simulate using essentially Kock & Callot [2015] Experimental Design D (which
 # we here renamed to C).
@@ -240,7 +245,7 @@ sim_data_c <- function(n = 100, p = 4, sigma_eps = 0.1, nburn = 10000) {
   return(y0ton)
 }
 
-## DESIGN C HELPER FUNCTIONS ##
+## == DESIGN C HELPER FUNCTIONS == ##
 
 # Coefficient matrix for the VAR(1) process
 # INPUT:
@@ -261,3 +266,8 @@ coef_mat_c <- function(p) {
   theta <- di + tri_up + t(tri_up)      # symmetrize
   return(theta)
 }
+
+## == DESIGN H(ETEROSKEDASTIC) == ##
+
+## == DESIGN H HELPER FUNCTIONS == ##
+sim_data_h <- function(n = 100)
