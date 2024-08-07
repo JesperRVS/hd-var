@@ -107,7 +107,7 @@ clusterSetRNGStream(cl, iseed = iseed)
 if (testrun) {
   nummc <- 10   # no. MC repetitions
 } else {
-  nummc <- 2000 # no. MC repetitions
+  nummc <- 1000 # no. MC repetitions
 }
 
 # Placeholders
