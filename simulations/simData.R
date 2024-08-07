@@ -20,7 +20,7 @@ library("Matrix")
 #'                seed = 1234, r = 1, nburn = 10000)
 #' sim_data_by_design(n = 100, p = 4, design = "NearBand", sigma_eps = 0.1,
 #'               seed = 1234, r = 1, nburn = 10000)
-sim_data_by_design <- function(n = 100, p = 4, design, sigma_eps = 0.1,
+sim_data_by_design <- function(n = 100, p = 4, design, sigma_eps = 0.1, h = 0.1,
                                nburn = 10000) {
   switch(design,
     # Diagonal design w/ independent Gaussian innovations
@@ -47,7 +47,7 @@ sim_data_by_design <- function(n = 100, p = 4, design, sigma_eps = 0.1,
       data <- sim_data_c(n = n, p = p, sigma_eps = sigma_eps, nburn = nburn)
     },
     "Heteroskedastic" = {
-      data <- sim_data_h(n = n, p = p, sigma_eps = sigma_eps, h = 0.1,
+      data <- sim_data_h(n = n, p = p, sigma_eps = sigma_eps, h = h,
                          nburn = nburn)
     },
     stop("Design not recognized.")
@@ -275,9 +275,9 @@ stds_eps_ylag <- function(ylag, h) {
   p <- length(ylag)
   stds_ylag <- numeric(p)
   for (i in 1:(p - 1)) {
-    stds_ylag[i] <- exp(- h * abs(ylag[i]) + h * abs(ylag[i + 1]))
+    stds_ylag[i] <- min(exp(- h * abs(ylag[i]) + h * abs(ylag[i + 1])), 100)
   }
-  stds_ylag[p] <- exp(- h * abs(ylag[p]) + h * abs(ylag[1]))
+  stds_ylag[p] <- min(exp(- h * abs(ylag[p]) + h * abs(ylag[1])), 100)
   return(stds_ylag)
 }
 
