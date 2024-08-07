@@ -1,8 +1,3 @@
-## TODO:
-# - Add heteroskedastic design
-# - Another testrun
-# - Go server
-
 # Clear
 rm(list = ls(all.names = TRUE)) # will clear all (including hidden) objects.
 invisible(gc()) #free up memory
@@ -21,20 +16,22 @@ using <- function(...) {
 }
 using(libpar)
 
-testrun <- TRUE
+if (Sys.info()[["sysname"]] == "Linux") {
+  setwd("..") # if on server, set working directory to parent
+}
+
+testrun <- FALSE # whether to run a test simulation
+
+h <- 3 # degree of heteroskedasticity (> 0) for heteroskedastic design only
 
 # Simulation settings
 if (testrun) {
-  # nvec <- 100
-  # nvec <- c(100, 200)
   nvec <- seq(from = 100, to = 500, by = 100)
-  # nvec <- seq(from = 100, to = 400, by = 100)
-  # pvec <- 4
   pvec <- c(4, 8, 16)
-  # designs <- c("Diagonal")
   # designs <- c("Diagonal", "BlockDiag")
-  designs <- c("Heteroskedastic")
-  # designs <- c("Diagonal", "Correlated", "HeavyTailed", "BlockDiag", "NearBand")
+  # designs <- c("Diagonal", "Heteroskedastic")
+  designs <- c("Diagonal", "Correlated", "HeavyTailed",
+               "BlockDiag", "NearBand", "Heteroskedastic")
   methods <- c("Lasso", "PostLasso",
                "AICLasso", "PostAICLasso",
                "BICLasso", "PostBICLasso",
@@ -44,9 +41,12 @@ if (testrun) {
 } else {
   nvec <- seq(from = 100, to = 2000, by = 100)
   pvec <- c(16, 32, 64, 128, 256)
-  designs <- c("Diagonal", "Correlated", "HeavyTailed", "BlockDiag", "NearBand")
-  methods <- c("Lasso", "PostLasso", "AICLasso", "PostAICLasso",
-               "BICLasso", "PostBICLasso", "HQICLasso", "PostHQICLasso",
+  designs <- c("Diagonal", "Correlated", "HeavyTailed",
+               "BlockDiag", "NearBand", "Heteroskedastic")
+  methods <- c("Lasso", "PostLasso",
+               "AICLasso", "PostAICLasso",
+               "BICLasso", "PostBICLasso",
+               "HQICLasso", "PostHQICLasso",
                "SqrtLasso", "PostSqrtLasso")
   nburn <- 1000
 }
@@ -59,7 +59,7 @@ nummet <- length(methods)
 
 q_switch <- function(design) {
   q <- list(Diagonal = 1, Correlated = 1, HeavyTailed = 1,
-            BlockDiag = 4, NearBand = 1)
+            BlockDiag = 4, NearBand = 1, Heteroskedastic = 1)
   return(q[[design]])
 }
 
@@ -117,6 +117,9 @@ dimnames(max_ell2_errors) <- list(mc = 1:nummc, n = nvec, p = pvec,
 max_row_sparsities <- array(NA, dim = c(nummc, numn, nump, numdes, nummet))
 dimnames(max_row_sparsities) <- list(mc = 1:nummc, n = nvec, p = pvec,
                                      design = designs, method = methods)
+num_upd <- array(NA, dim = c(nummc, numn, nump, numdes, 2))
+dimnames(num_upd) <- list(mc = 1:nummc, n = nvec, p = pvec,
+                          design = designs, method = c("Lasso", "PostLasso"))
 
 intercept <- FALSE # whether to include intercept in simulations
 
@@ -130,17 +133,15 @@ for (this_design in seq_along(designs)) {
       p <- pvec[thisp]
       theta <- theta_switch(design, p = p)
       print(paste("Design:", design, ", n:", n, ", p:", p))
-      results <- foreach(icount(nummc)) %do% {
+      results <- foreach(icount(nummc)) %dopar% {
         # GENERATE DATA
-        print("here")
         source("simulations/simData.R", local = TRUE)
         data <- sim_data_by_design(n = n, p = p, design = design,
-                                   nburn = nburn)
-        print(dim(data))
-        print("here?")
+                                   h = h, nburn = nburn)
         # ESTIMATE VAR MODEL
         errors <- numeric(nummet)
         shats <- numeric(nummet)
+        kterms <- numeric(2)
 
         # 1-2. LASSO AND POST-LASSO
         # 1. LASSO
@@ -150,12 +151,14 @@ for (this_design in seq_along(designs)) {
         that_lasso <- fit_lasso$that
         errors[1] <- max_ell2_row(that_lasso - theta)
         shats[1] <- max_row_sparsity(that_lasso)
+        kterms[1] <- fit_lasso$k_term
         # 2. POST-LASSO
         fit_postl <- lasso_var(data = data, q = q,
                                post = TRUE, intercept = intercept)
         that_postl <- fit_postl$that
         errors[2] <- max_ell2_row(that_postl - theta)
         shats[2] <- max_row_sparsity(that_postl)
+        kterms[2] <- fit_postl$k_term
 
         # 3-8. IC-LASSOS AND POST-IC-LASSOS
         # 3/5/7. IC-LASSOS
@@ -206,21 +209,27 @@ for (this_design in seq_along(designs)) {
         that_postsqrtl <- fit_postsqrtl$that
         errors[10] <- max_ell2_row(that_postsqrtl - theta)
         shats[10] <- max_row_sparsity(that_postsqrtl)
-        list(errors, shats) # return results as list
+        list(errors, shats, kterms) # return results as list
       } # mc loop
-      # Extract maximum rowwise ell_2 errors and row sparsities, respectively
+      # Extract max rowwise ell_2 errors, max row sparsities
+      # and number of loading updates (Lasso and PostLasso), respectively
       max_ell2_errors[, thisn, thisp, this_design, ] <-
         t(sapply(lapply(results, "[[", 1), unlist))
       max_row_sparsities[, thisn, thisp, this_design, ] <-
         t(sapply(lapply(results, "[[", 2), unlist))
+      num_upd[, thisn, thisp, this_design, ] <-
+        t(sapply(lapply(results, "[[", 3), unlist))
     } # p loop
   } # n loop
 } # design loop
 stopCluster(cl)
 
 # Save the workspace
-file_name <- paste("simulations_workspace_heteroskedastic_", nummc, "_MC_",
-                   min(nvec), "_to_", max(nvec),
-                   "_n_", min(pvec), "_to_", max(pvec), "_p", sep = "")
-
-save.image(file = paste0("simulations/", file_name, ".RData"))
+if (Sys.info()[["sysname"]] == "Linux") {
+  file_name <- paste("simulations_workspace_", nummc, "_MC_",
+                     min(nvec), "_to_", max(nvec),
+                     "_n_", min(pvec), "_to_", max(pvec), "_p_",
+                     h, "_h", sep = "")
+  save.image(file = paste0("simulations/", file_name, ".RData"))
+  q("no")
+}
