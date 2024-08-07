@@ -20,7 +20,7 @@ using(libplt)
 library("latex2exp")
 
 # Load workspace
-load("simulations_workspace_100_MC_100_to_500_n_4_to_16_p.RData")
+load("simulations_workspace_10_MC_100_to_500_n_4_to_16_p_3_h.RData")
 
 # Specify statistics to plot and methods to include
 stats_plt <- c("mean", "max") # statistics to plot (fed to apply)
@@ -50,7 +50,7 @@ stat_string <- function(stat) {
 }
 
 # Function taking statistic and methods to plot, returning ggplot
-t_str <- " of $\\max_{i\\in[p]}\\|\\widehat{\\beta}_i-\\beta_{0i}\\|_{\\ell_2}$"
+t_str <- " of $\\max_{i\\in[p]}\\|\\widehat{\\beta}_i-\\beta_{{0}{i}}\\|_{\\ell_2}$"
 plot_stat_p_by_design <- function(stat, met_plt) {
   where_met_plt <- which_methods(met_plt)
   stat_max_ell2_errors <- apply(max_ell2_errors, c(2, 3, 4, 5), stat)
