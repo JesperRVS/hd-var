@@ -43,8 +43,8 @@ if (testrun) {
                "HQICLasso", "PostHQICLasso",
                "SqrtLasso", "PostSqrtLasso")
   nburn <- 1000
-  nummc <- 80 # no. MC repetitions
-  # nummc <- 250 # no. MC repetitions TODO
+  # nummc <- 80 # no. MC repetitions
+  nummc <- 250 # no. MC repetitions TODO
 }
 numn <- length(nvec)
 nump <- length(pvec)
