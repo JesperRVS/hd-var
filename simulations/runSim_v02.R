@@ -4,20 +4,10 @@ invisible(gc()) #free up memory
 
 # Packages for parallel computing
 libpar <- c("doRNG", "doParallel", "foreach")
-# Auto-installer (checks if installed - if not, installs and loads)
-using <- function(...) {
-  libs <- unlist(list(...))
-  req <- unlist(lapply(libs, require, character.only = TRUE))
-  need <- libs[req == FALSE]
-  if (length(need) > 0) {
-    install.packages(pkgs = need, repos = "https://cran.us.r-project.org")
-    lapply(need, require, character.only = TRUE)
-  }
-}
-using(libpar)
+lapply(libpar, require, character.only = TRUE)
 
 if (Sys.info()[["sysname"]] == "Linux") {
-  setwd("..") # if on server, set working directory to parent
+  setwd("..") # if on Linux server, back up to parent folder
 }
 
 testrun <- FALSE # whether to run a test simulation
@@ -38,9 +28,13 @@ if (testrun) {
                "HQICLasso", "PostHQICLasso",
                "SqrtLasso", "PostSqrtLasso")
   nburn <- 100
+  nummc <- 10   # no. MC repetitions
 } else {
-  nvec <- seq(from = 100, to = 2000, by = 100)
-  pvec <- c(16, 32, 64, 128, 256)
+  # nvec <- seq(from = 100, to = 500, by = 100)
+  nvec <- seq(from = 200, to = 1000, by = 200)
+  # nvec <- seq(from = 100, to = 1000, by = 100) # TODO
+  pvec <- c(16, 32, 64, 128)
+  # pvec <- c(16, 32, 64, 128, 256) # TODO
   designs <- c("Diagonal", "Correlated", "HeavyTailed",
                "BlockDiag", "NearBand", "Heteroskedastic")
   methods <- c("Lasso", "PostLasso",
@@ -49,6 +43,8 @@ if (testrun) {
                "HQICLasso", "PostHQICLasso",
                "SqrtLasso", "PostSqrtLasso")
   nburn <- 1000
+  nummc <- 80 # no. MC repetitions
+  # nummc <- 250 # no. MC repetitions TODO
 }
 numn <- length(nvec)
 nump <- length(pvec)
@@ -104,11 +100,6 @@ iseed <- 2345 # set seed for reproducibility
 cl <- makeCluster(detectCores())
 registerDoParallel(cl)
 clusterSetRNGStream(cl, iseed = iseed)
-if (testrun) {
-  nummc <- 10   # no. MC repetitions
-} else {
-  nummc <- 1000 # no. MC repetitions
-}
 
 # Placeholders
 max_ell2_errors <- array(NA, dim = c(nummc, numn, nump, numdes, nummet))
