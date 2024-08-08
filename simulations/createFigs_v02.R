@@ -4,18 +4,19 @@ invisible(gc()) #free up memory
 
 # Packages for plotting
 libplt <- c("devtools", "ggplot2", "reshape")
+lapply(libplt, require, character.only = TRUE)
 
-# Auto-installer (checks if installed - if not, installs and loads)
-using <- function(...) {
-  libs <- unlist(list(...))
-  req <- unlist(lapply(libs, require, character.only = TRUE))
-  need <- libs[req == FALSE]
-  if (length(need) > 0) {
-    install.packages(pkgs = need, repos = "https://cran.us.r-project.org")
-    lapply(need, require, character.only = TRUE)
-  }
-}
-using(libplt)
+# # Auto-installer (checks if installed - if not, installs and loads)
+# using <- function(...) {
+#   libs <- unlist(list(...))
+#   req <- unlist(lapply(libs, require, character.only = TRUE))
+#   need <- libs[req == FALSE]
+#   if (length(need) > 0) {
+#     install.packages(pkgs = need, repos = "https://cran.us.r-project.org")
+#     lapply(need, require, character.only = TRUE)
+#   }
+# }
+# using(libplt)
 # devtools::install_github("stefano-meschiari/latex2exp")
 library("latex2exp")
 
