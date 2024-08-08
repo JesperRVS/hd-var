@@ -84,25 +84,22 @@ unpack <- function(data, q = 1) {
 #' fit <- ls_sol(x, y)
 #' @export
 ls_sol <- function(x, y) {
-  # Check for full column rank
-  full_rank <- ncol(x) == Matrix::rankMatrix(x)[1]
-  if (full_rank) {
-    # When full rank, produce unique (OLS) solution
+  # Try to compute the least squares solution using solve()
+  tryCatch({
     sol <- solve(crossprod(x), crossprod(x, y))
-    # This is (X' X)^{-1} X' y (which equals X^+ y)
-  } else {
-    # Use SVD for rank-deficient case
-    svd_x <- svd(x)                             # compute SVD
-    d <- svd_x$d                                # singular values
-    u <- svd_x$u                                # left singular vectors
-    v <- svd_x$v                                # right singular vectors
-    tol <- max(dim(x)) * .Machine$double.eps    # scale free tolerance
-    d_inv <- ifelse(d > tol * max(d), 1 / d, 0) # inverse singular values
-    sol <- v %*% (d_inv * t(u) %*% y)
-    # This is X^+ y
-  }
-  fit <- list(sol = sol, full_rank = full_rank)
-  return(fit)
+    solve_failed <- FALSE
+    return(list(sol = sol, solve_failed = solve_failed))
+  }, error = function(e) {
+    # If solve fails, compute Moore-Penrose solution and flag failure
+    svd_x <- svd(x)
+    d <- svd_x$d  # singular values
+    tol <- max(dim(x)) * .Machine$double.eps      # scale free tolerance
+    d_inv <- ifelse(d > tol * max(d), 1 / d, 0)   # inverse singular values
+    x_plus <- svd_x$v %*% (d_inv * t(svd_x$u))    # Moore-Penrose inverse
+    sol <- x_plus %*% y                           # Moore-Penrose solution
+    solve_failed <- TRUE
+    return(list(sol = sol, solve_failed = solve_failed))
+  })
 }
 
 #' Least Squares Refitting with Multiple Responses and Same Regressors
@@ -135,7 +132,7 @@ mult_refit <- function(x, y, that) {
     xi <- as.matrix(x[, sel[i, ]])      # get active regressors
     fit_i <- ls_sol(xi, y[, i])         # refit
     that[i, sel[i, ]] <- fit_i$sol      # overwrite (keeping zeros)
-    full_rank[i] <- fit_i$full_rank     # check rank
+    full_rank[i] <- !fit_i$solve_failed # interpret solve failure as low rank
   }
   full_rank[num_selections == 0] <- TRUE  # default full rank for no selections
   refit <- list(that = that, full_rank = full_rank)
