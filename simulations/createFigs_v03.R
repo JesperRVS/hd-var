@@ -10,7 +10,8 @@ library("latex2exp")
 
 # Load workspace
 # load("simulations_workspace_10_MC_100_to_500_n_4_to_16_p_3_h.RData")
-load("simulations_workspace_80_MC_100_to_500_n_16_to_128_p_3_h_LINUX_with_num_upd.RData")
+# load("simulations_workspace_80_MC_100_to_500_n_16_to_128_p_3_h_LINUX_with_num_upd.RData")
+load("simulations_workspace_250_MC_200_to_1000_n_16_to_128_p_3_h_LINUX_with_num_upd.RData")
 
 ## == HELPER FUNCTIONS ##
 # Function providing locations of methods to plot
