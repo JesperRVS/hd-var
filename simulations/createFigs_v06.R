@@ -10,8 +10,9 @@ lapply(libplt, require, character.only = TRUE)
 
 # Load workspace
 # load("simulations_workspace_10_MC_100_to_500_n_4_to_16_p_3_h.RData")
+load("simulations_workspace_50_MC_100_to_500_n_4_to_64_p_3_h_dot9_rho_with_num_upd.Rdata")
 # load("simulations_workspace_80_MC_100_to_500_n_16_to_128_p_3_h_LINUX_with_num_upd.RData")
-load("simulations_workspace_250_MC_200_to_1000_n_16_to_128_p_3_h_LINUX_with_num_upd.RData")
+# load("simulations_workspace_250_MC_200_to_1000_n_16_to_128_p_3_h_LINUX_with_num_upd.RData")
 
 ## == HELPER FUNCTIONS ##
 # Function providing locations of methods to plot
@@ -167,10 +168,11 @@ plot_rel_stat_p_by_design <- function(stat, met_plt, des_plt) {
 }
 
 # 1. Comparing Lasso, Sqrt-Lasso, Post-Lasso and BIC-Lasso
+met_plt <- c("Lasso", "PostLasso", "SqrtLasso", "BICLasso", "PostBICLasso")
+des_plt <- c("Diagonal", "Correlated")
 # met_plt <- c("Lasso", "PostLasso", "SqrtLasso", "BICLasso")
-met_plt <- c("Lasso", "PostLasso", "SqrtLasso")
-des_plt <- c("Diagonal", "BlockDiag", "NearBand",
-             "Correlated", "Heteroskedastic", "HeavyTailed")
+# des_plt <- c("Diagonal", "BlockDiag", "NearBand",
+#              "Correlated", "Heteroskedastic", "HeavyTailed")
 stats_plt <- c("mean", "median", "q90", "q95") # statistics to plot
 for (thisstat in seq_along(stats_plt)) {
   which_stat <- stats_plt[thisstat]
