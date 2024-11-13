@@ -20,8 +20,8 @@ library("Matrix")
 #'                seed = 1234, r = 1, nburn = 10000)
 #' sim_data_by_design(n = 100, p = 4, design = "NearBand", sigma_eps = 0.1,
 #'               seed = 1234, r = 1, nburn = 10000)
-sim_data_by_design <- function(n = 100, p = 4, design, sigma_eps = 0.1, h = 0.1,
-                               nburn = 10000) {
+sim_data_by_design <- function(n = 100, p = 4, design, sigma_eps = 0.1,
+                               rho = 0.9, h = 0.1, nburn = 10000) {
   switch(design,
     # Diagonal design w/ independent Gaussian innovations
     "Diagonal" = {
@@ -31,7 +31,7 @@ sim_data_by_design <- function(n = 100, p = 4, design, sigma_eps = 0.1, h = 0.1,
     # Diagonal design w/ correlated Gaussian innovations
     "Correlated" = {
       data <- sim_data_a(n = n, p = p, family = "gaussian",
-                         sigma_eps = sigma_eps, rho = 0.5, nburn = nburn)
+                         sigma_eps = sigma_eps, rho = rho, nburn = nburn)
     },
     # Diagonal design w/ independent Student-t innovations
     "HeavyTailed" = {
@@ -137,24 +137,35 @@ sim_eps <- function(n = 100, p = 4, family = "gaussian",
   return(eps)
 }
 
-# Innovation correlation matrix, Toeplitz structure
+# Innovation correlation matrix, equi-correlation structure
 # INPUTS:
 #   p:          System dimension, integer
 #   rho:        Level of correlation between eps_0,i and eps_0,j, i != j
 # OUTPUT:
 #   sigma:      p x p innovation correlation matrix
 cor_mat <- function(p, rho) {
-  sigma_temp <- matrix(0, p, p)
-  for (j in 1:(p - 1)) {
-    for (k in (j + 1):p) {
-      sigma_temp[j, k] <- rho^(abs(j - k))
-    }
-  }
-  tri_up <- Matrix::triu(sigma_temp, 1) # strict upper triangle
-  sigma <- diag(p) + tri_up + t(tri_up) # symmetrize
-  # sigma <- Matrix::Diagonal(p) + tri_up + t(tri_up) # NOT A MATRIX?
+  sigma <- rho * matrix(1, p, p) + (1 - rho) * diag(p)
   return(sigma)
 }
+
+# # Innovation correlation matrix, Toeplitz structure
+# # INPUTS:
+# #   p:          System dimension, integer
+# #   rho:        Level of correlation between eps_0,i and eps_0,j, i != j
+# # OUTPUT:
+# #   sigma:      p x p innovation correlation matrix
+# cor_mat <- function(p, rho) {
+#   sigma_temp <- matrix(0, p, p)
+#   for (j in 1:(p - 1)) {
+#     for (k in (j + 1):p) {
+#       sigma_temp[j, k] <- rho^(abs(j - k))
+#     }
+#   }
+#   tri_up <- Matrix::triu(sigma_temp, 1) # strict upper triangle
+#   sigma <- diag(p) + tri_up + t(tri_up) # symmetrize
+#   # sigma <- Matrix::Diagonal(p) + tri_up + t(tri_up) # NOT A MATRIX?
+#   return(sigma)
+# }
 
 ## == DESIGN B == ##
 
