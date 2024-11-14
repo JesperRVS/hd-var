@@ -9,7 +9,7 @@ lapply(libplt, require, character.only = TRUE)
 # devtools::install_github("stefano-meschiari/latex2exp") # to get ell in TeX
 
 # Load workspace
-load("simulations_workspace_10_MC_100_to_500_n_4_to_16_p_3_h_dot9_rho_with_num_upd.RData")
+load("simulations_workspace_80_MC_100_to_500_n_4_to_64_p_3_h_dot9_rho_with_num_upd_LINUX.RData")
 # load("simulations_workspace_100_MC_100_to_500_n_4_to_64_p_3_h_dot9_rho_with_num_upd.RData")
 # load("simulations_workspace_50_MC_100_to_500_n_4_to_64_p_3_h_dot9_rho_with_num_upd.Rdata")
 # load("simulations_workspace_80_MC_100_to_500_n_16_to_128_p_3_h_LINUX_with_num_upd.RData")
@@ -46,25 +46,59 @@ des_lab <- function(string) {
                    "BlockDiag" = "B: Block diag., IID Gaussian",
                    "NearBand" = "C: Near band, IID Gaussian",
                    "Correlated" = "D: Diag., Correlated Gaussian",
-                   "Heteroskedastic_y" = "E: Diag., y-Heterosked. Gaussian",
-                   "Heteroskedastic_eta" = "E: Diag., eta-Heterosked. Gaussian",
+                   "Heteroskedastic_y" = "E: Diag., y-Hetero. Gaussian",
+                   "Heteroskedastic_eta" = "E: Diag., eta-Hetero. Gaussian",
                    "HeavyTailed" = "F: Diag., IID Student's t")
   return(des_list[string])
 }
 
+# met_lab <- function(string) {
+#   met_list <- list("Lasso" = "Lasso",
+#                    "AICLasso" = "AIC Lasso",
+#                    "BICLasso" = "BIC Lasso",
+#                    "HQICLasso" = "HQIC Lasso",
+#                    "SqrtLasso" = "Square-Root Lasso",
+#                    "PostLasso" = "Post Lasso",
+#                    "PostAICLasso" = "Post AIC Lasso",
+#                    "PostBICLasso" = "Post BIC Lasso",
+#                    "PostHQICLasso" = "Post HQIC Lasso",
+#                    "PostSqrtLasso" = "Post Square-Root Lasso")
+#   return(met_list[string])
+# }
+
+# # Rewrite met_lab using a switch instead of a list
+# met_lab <- function(string) {
+#   switch(string,
+#          "Lasso" = "Lasso",
+#          "AICLasso" = "AIC Lasso",
+#          "BICLasso" = "BIC Lasso",
+#          "HQICLasso" = "HQIC Lasso",
+#          "SqrtLasso" = "Square-Root Lasso",
+#          "PostLasso" = "Post Lasso",
+#          "PostAICLasso" = "Post AIC Lasso",
+#          "PostBICLasso" = "Post BIC Lasso",
+#          "PostHQICLasso" = "Post HQIC Lasso",
+#          "PostSqrtLasso" = "Post Square-Root Lasso",
+#          stop("Invalid method"))
+# }
+# Rewrite met_lab to allow for vector of strings
 met_lab <- function(string) {
-  met_list <- list("Lasso" = "Lasso",
-                   "AICLasso" = "AIC Lasso",
-                   "BICLasso" = "BIC Lasso",
-                   "HQICLasso" = "HQIC Lasso",
-                   "SqrtLasso" = "Square-Root Lasso",
-                   "PostLasso" = "Post Lasso",
-                   "PostAICLasso" = "Post AIC Lasso",
-                   "PostBICLasso" = "Post BIC Lasso",
-                   "PostHQICLasso" = "Post HQIC Lasso",
-                   "PostSqrtLasso" = "Post Square-Root Lasso")
+  met_list <- c("Lasso" = "Lasso",
+                "AICLasso" = "AIC Lasso",
+                "BICLasso" = "BIC Lasso",
+                "HQICLasso" = "HQIC Lasso",
+                "SqrtLasso" = "Square-Root Lasso",
+                "PostLasso" = "Post Lasso",
+                "PostAICLasso" = "Post AIC Lasso",
+                "PostBICLasso" = "Post BIC Lasso",
+                "PostHQICLasso" = "Post HQIC Lasso",
+                "PostSqrtLasso" = "Post Square-Root Lasso")
   return(met_list[string])
 }
+# Rewrite met_lab to only return the formatted strings
+
+
+
 
 # Specify statistics to plot and methods to include
 stats_plt <- c("mean", "median", "q90", "q95") # statistics to plot
@@ -133,9 +167,8 @@ plot_rel_stat_p_by_design <- function(stat, met_plt, des_plt) {
     scale_shape(solid = FALSE) +
     geom_hline(yintercept = 1, linetype = "dotted", color = "black") +
     ggh4x::facet_grid2(design ~ p,
-                       labeller = labeller(p = plab,
-                                           method = met_lab,
-                                           design = des_lab),
+                       labeller = labeller(p = plab, design = des_lab,
+                                           method = met_lab),
                        scales = "free_y") +
     # facetted_pos_scales(
     #       y = list(
@@ -151,8 +184,9 @@ plot_rel_stat_p_by_design <- function(stat, met_plt, des_plt) {
       y = TeX(paste0("Monte Carlo ", stat_string(stat), t_str))
     ) +
     theme_bw() +
-    theme(legend.justification = c(1, 1), legend.position = c(1, 1),
-          legend.key = element_rect(colour = "transparent", fill = NA),
+    theme(#legend.justification = c(1, 1), legend.position = c(1, 1),
+          legend.position = "bottom",
+          # legend.key = element_rect(colour = "transparent", fill = NA),
           legend.box.background = element_rect(colour = "black"),
           legend.title = element_blank(),
           legend.text = element_text(size = rel(.75)),
@@ -174,8 +208,10 @@ plot_rel_stat_p_by_design <- function(stat, met_plt, des_plt) {
 # 1. Comparing Lasso, Sqrt-Lasso, Post-Lasso and BIC-Lasso
 # met_plt <- c("Lasso", "PostLasso", "SqrtLasso", "PostSqrtLasso", "BICLasso", "PostBICLasso")
 # des_plt <- c("Diagonal", "Correlated")
+# met_plt <- c("Lasso", "PostLasso", "SqrtLasso", "BICLasso")
 met_plt <- c("Lasso", "PostLasso", "SqrtLasso", "BICLasso", "PostBICLasso")
-des_plt <- c("Diagonal", "Heteroskedastic_y", "Heteroskedastic_eta")
+des_plt <- c("Diagonal", "BlockDiag", "NearBand", "Correlated",
+             "Heteroskedastic_y", "Heteroskedastic_eta", "HeavyTailed")
 # met_plt <- c("Lasso", "PostLasso", "SqrtLasso", "PostSqrtLasso", "BICLasso")
 # des_plt <- c("Diagonal", "BlockDiag", "NearBand",
 #              "Correlated", "Heteroskedastic", "HeavyTailed")
