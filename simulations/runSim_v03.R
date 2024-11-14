@@ -18,28 +18,28 @@ h <- 3 # degree of heteroskedasticity (> 0) for heteroskedastic design only
 # Simulation settings
 if (testrun) {
   nvec <- seq(from = 100, to = 500, by = 100)
-  pvec <- c(4, 8, 16, 32, 64)
-  designs <- c("Diagonal", "Correlated")
-  # designs <- c("Diagonal", "Correlated", "HeavyTailed",
-  #              "BlockDiag", "NearBand", "Heteroskedastic")
+  pvec <- c(4, 8, 16)
+  # designs <- c("Diagonal", "Correlated")
+  designs <- c("Diagonal", "Heteroskedastic_y", "Heteroskedastic_eta")
   # methods <- c("Lasso", "PostLasso", "SqrtLasso")
   methods <- c("Lasso", "PostLasso",
                "BICLasso", "PostBICLasso",
-               "SqrtLasso")
+               "SqrtLasso", "PostSqrtLasso")
   nburn <- 100
-  nummc <- 50   # no. MC repetitions
+  nummc <- 10 # no. MC repetitions
 } else {
   nvec <- seq(from = 200, to = 1000, by = 200)
   # nvec <- seq(from = 100, to = 1000, by = 100) # TODO
   pvec <- c(16, 32, 64, 128)
   designs <- c("Diagonal", "Correlated", "HeavyTailed",
-               "BlockDiag", "NearBand", "Heteroskedastic")
+               "BlockDiag", "NearBand",
+               "Heteroskedastic_y", "Heteroskedastic_eta")
   methods <- c("Lasso", "PostLasso",
                "BICLasso", "PostBICLasso",
                "SqrtLasso", "PostSqrtLasso")
   methods <- c("Lasso", "PostLasso",
                "BICLasso", "PostBICLasso",
-               "SqrtLasso")
+               "SqrtLasso", "PostSqrtLasso")
   nburn <- 1000
   nummc <- 250 # no. MC repetitions TODO
 }
@@ -52,7 +52,8 @@ nummet <- length(methods)
 
 q_switch <- function(design) {
   q <- list(Diagonal = 1, Correlated = 1, HeavyTailed = 1,
-            BlockDiag = 4, NearBand = 1, Heteroskedastic = 1)
+            BlockDiag = 4, NearBand = 1,
+            Heteroskedastic_y = 1, Heteroskedastic_eta = 1)
   return(q[[design]])
 }
 
@@ -63,8 +64,8 @@ coef_mat_c <- function(p) {0}
 insertSource("simulations/simData.R",
              functions = c("coef_mat_a", "coef_mat_b", "coef_mat_c"))
 theta_switch <- function(design, p = 4) {
-  if (design %in% c("Diagonal", "Correlated",
-                    "HeavyTailed", "Heteroskedastic")) {
+  if (design %in% c("Diagonal", "Correlated", "HeavyTailed",
+                    "Heteroskedastic_y", "Heteroskedastic_eta")) {
     theta <- coef_mat_a(p = p)
   } else if (design == "BlockDiag") {
     theta <- coef_mat_b(p = p)
@@ -151,24 +152,29 @@ for (this_design in seq_along(designs)) {
         # 3. BIC-LASSO
         source("icLassoVAR.R", local = TRUE) # for bic_lasso_var
         fit_bic <- ic_lasso_var(data = data, q = q, criteria = "bic",
-                                 post = FALSE, intercept = intercept)
-        that_bic <- fit_bic$thats[, , 1] # extract estimates
+                                post = TRUE, intercept = intercept)
+        # Note: post = TRUE to get also Post-BIC-Lasso
+        that_bic <- fit_bic$thats[, , "bic"] # extract estimates
         errors[3] <- max_ell2_row(that_bic - theta) # calculate errors
         shats[3] <- max_row_sparsity(that_bic) # calculate sparsity
         # 4. POST-BIC-LASSO
-        fit_postbic <- ic_lasso_var(data = data, q = q, criteria = "bic",
-                                    post = TRUE, intercept = intercept)
-        that_postbic <- fit_postbic$thats[, , 1] # extract estimates
+        that_postbic <- fit_bic$thats_post[, , 1] # extract estimates
         errors[4] <- max_ell2_row(that_postbic - theta) # calculate errors
         shats[4] <- max_row_sparsity(that_postbic) # calculate sparsity
 
-        # 5. SQRT-LASSO
+        # 5-6. SQRT-LASSO AND POST-SQRT-LASSO
         source("sqrtLassoVAR.R", local = TRUE) # for sqrt_lasso_var
         fit_sqrtl <- sqrt_lasso_var(data = data, q = q,
-                                    post = FALSE, intercept = intercept)
+                                    post = TRUE, intercept = intercept)
+        # Note: post = TRUE to get also Post-Sqrt-Lasso
+        # 5. SQRT-LASSO
         that_sqrtl <- fit_sqrtl$that
         errors[5] <- max_ell2_row(that_sqrtl - theta)
         shats[5] <- max_row_sparsity(that_sqrtl)
+        # 6. POST-SQRT-LASSO
+        that_postsqrtl <- fit_sqrtl$that_post
+        errors[6] <- max_ell2_row(that_postsqrtl - theta)
+        shats[6] <- max_row_sparsity(that_postsqrtl)
 
         list(errors, shats, kterms) # return results as list
       } # mc loop

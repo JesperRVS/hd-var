@@ -9,8 +9,9 @@ lapply(libplt, require, character.only = TRUE)
 # devtools::install_github("stefano-meschiari/latex2exp") # to get ell in TeX
 
 # Load workspace
-# load("simulations_workspace_10_MC_100_to_500_n_4_to_16_p_3_h.RData")
-load("simulations_workspace_50_MC_100_to_500_n_4_to_64_p_3_h_dot9_rho_with_num_upd.Rdata")
+load("simulations_workspace_10_MC_100_to_500_n_4_to_16_p_3_h_dot9_rho_with_num_upd.RData")
+# load("simulations_workspace_100_MC_100_to_500_n_4_to_64_p_3_h_dot9_rho_with_num_upd.RData")
+# load("simulations_workspace_50_MC_100_to_500_n_4_to_64_p_3_h_dot9_rho_with_num_upd.Rdata")
 # load("simulations_workspace_80_MC_100_to_500_n_16_to_128_p_3_h_LINUX_with_num_upd.RData")
 # load("simulations_workspace_250_MC_200_to_1000_n_16_to_128_p_3_h_LINUX_with_num_upd.RData")
 
@@ -45,7 +46,8 @@ des_lab <- function(string) {
                    "BlockDiag" = "B: Block diag., IID Gaussian",
                    "NearBand" = "C: Near band, IID Gaussian",
                    "Correlated" = "D: Diag., Correlated Gaussian",
-                   "Heteroskedastic" = "E: Diag., Heterosked. Gaussian",
+                   "Heteroskedastic_y" = "E: Diag., y-Heterosked. Gaussian",
+                   "Heteroskedastic_eta" = "E: Diag., eta-Heterosked. Gaussian",
                    "HeavyTailed" = "F: Diag., IID Student's t")
   return(des_list[string])
 }
@@ -94,15 +96,17 @@ stat_fctn <- function(stat) {
          stop("Invalid statistic"))
 }
 
-# Color-blind friendly color palette 
+# Color-blind friendly color palette
 cb_palette <- c("#E69F00", "#56B4E9", "#000000", "#009E73",
                 "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
 
 # Shape order
-shape_order <- c(0, 1, 2, 5, 4) # square, circle, triangle, diamond, cross
+shape_order <- c(0, 1, 2, 5, 4, 3)
+# 0=square, 1=circle, 2=triangle, 5=diamond, 4=cross, 3=plus
 
 # Linetype order
-linetype_order <- c("solid", "dashed", "dotdash", "dotted", "longdash")
+linetype_order <- c("solid", "dashed", "dotdash", 
+                    "dotted", "longdash", "twodash")
 
 # Function to plot error statistics as method (cols) by design (rows)
 t_str <- " of $\\max_{i\\in[p]}\\|\\widehat{\\beta}_i-\\beta_{{0}{i}}\\|_{\\ell_2}$ Relative to that of Lasso"
@@ -168,9 +172,11 @@ plot_rel_stat_p_by_design <- function(stat, met_plt, des_plt) {
 }
 
 # 1. Comparing Lasso, Sqrt-Lasso, Post-Lasso and BIC-Lasso
+# met_plt <- c("Lasso", "PostLasso", "SqrtLasso", "PostSqrtLasso", "BICLasso", "PostBICLasso")
+# des_plt <- c("Diagonal", "Correlated")
 met_plt <- c("Lasso", "PostLasso", "SqrtLasso", "BICLasso", "PostBICLasso")
-des_plt <- c("Diagonal", "Correlated")
-# met_plt <- c("Lasso", "PostLasso", "SqrtLasso", "BICLasso")
+des_plt <- c("Diagonal", "Heteroskedastic_y", "Heteroskedastic_eta")
+# met_plt <- c("Lasso", "PostLasso", "SqrtLasso", "PostSqrtLasso", "BICLasso")
 # des_plt <- c("Diagonal", "BlockDiag", "NearBand",
 #              "Correlated", "Heteroskedastic", "HeavyTailed")
 stats_plt <- c("mean", "median", "q90", "q95") # statistics to plot
