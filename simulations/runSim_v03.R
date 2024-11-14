@@ -10,7 +10,7 @@ if (Sys.info()[["sysname"]] == "Linux") {
   setwd("..") # if on Linux server, back up to parent folder
 }
 
-testrun <- TRUE # whether to run a test simulation
+testrun <- FALSE # whether to run a test simulation
 
 rho <- 0.9 # correlation parameter for correlated design only
 h <- 3 # degree of heteroskedasticity (> 0) for heteroskedastic design only
@@ -18,15 +18,15 @@ h <- 3 # degree of heteroskedasticity (> 0) for heteroskedastic design only
 # Simulation settings
 if (testrun) {
   nvec <- seq(from = 100, to = 500, by = 100)
-  pvec <- c(4, 8, 16)
-  # designs <- c("Diagonal", "Correlated")
-  designs <- c("Diagonal", "Heteroskedastic_y", "Heteroskedastic_eta")
-  # methods <- c("Lasso", "PostLasso", "SqrtLasso")
+  pvec <- c(4, 8, 16, 32, 64)
+  designs <- c("Diagonal", "Correlated", "HeavyTailed",
+               "BlockDiag", "NearBand",
+               "Heteroskedastic_y", "Heteroskedastic_eta")
   methods <- c("Lasso", "PostLasso",
                "BICLasso", "PostBICLasso",
                "SqrtLasso", "PostSqrtLasso")
   nburn <- 100
-  nummc <- 10 # no. MC repetitions
+  nummc <- 80 # no. MC repetitions
 } else {
   nvec <- seq(from = 200, to = 1000, by = 200)
   # nvec <- seq(from = 100, to = 1000, by = 100) # TODO
@@ -37,11 +37,8 @@ if (testrun) {
   methods <- c("Lasso", "PostLasso",
                "BICLasso", "PostBICLasso",
                "SqrtLasso", "PostSqrtLasso")
-  methods <- c("Lasso", "PostLasso",
-               "BICLasso", "PostBICLasso",
-               "SqrtLasso", "PostSqrtLasso")
   nburn <- 1000
-  nummc <- 250 # no. MC repetitions TODO
+  nummc <- 1000 # no. MC repetitions TODO
 }
 numn <- length(nvec)
 nump <- length(pvec)
