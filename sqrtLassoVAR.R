@@ -76,25 +76,35 @@ sqrt_lasso_var <- function(data, q = 1, post = TRUE, intercept = TRUE,
     stop("Invalid dimensions for upsilon.")
   }
   # ESTIMATE
-  # Estimate the square-root LASSO VAR
+  # Estimate VAR model using square-root LASSO
   that <- mult_sqrt_lasso(x, y, lambda = lambda_star_sqrt,
                           upsilon = upsilon,
                           max_iter = max_iter,
                           rel_tol_norm = rel_tol_norm)
-  # POST-PROCESS
-  # If requested, refit estimates after selection
-  if (post) {
-    refit <- mult_refit(x, y, that)
-    that <- refit$that
-    full_rank_post <- refit$full_rank
-  } else {
-    full_rank_post <- NULL
-  }
   # Back out intercepts if requested
   if (intercept) {
     intr <- ybar - that %*% xbar
   } else {
     intr <- NULL
   }
-  return(list(intr = intr, that = that, full_rank_post = full_rank_post))
+  # POST-PROCESS if requested
+  if (post) {
+    refit <- mult_refit(x, y, that)
+    that_post <- refit$that
+    full_rank_post <- refit$full_rank
+    # Back out intercepts (based on refitted coefficients) if requested
+    if (intercept) {
+      intr_post <- ybar - that_post %*% xbar
+    } else {
+      intr_post <- NULL
+    }
+  } else {
+    intr_post <- NULL
+    that_post <- NULL
+    full_rank_post <- NULL
+  }
+  # RETURN
+  return(list(intr = intr, that = that,
+              intr_post = intr_post, that_post = that_post,
+              full_rank_post = full_rank_post))
 }
