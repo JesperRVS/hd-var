@@ -46,9 +46,13 @@ sim_data_by_design <- function(n = 100, p = 4, design, sigma_eps = 0.1,
     "NearBand" = {
       data <- sim_data_c(n = n, p = p, sigma_eps = sigma_eps, nburn = nburn)
     },
-    "Heteroskedastic" = {
+    "Heteroskedastic_y" = {
       data <- sim_data_h(n = n, p = p, sigma_eps = sigma_eps, h = h,
                          nburn = nburn)
+    },
+    "Heteroskedastic_eta" = {
+      data <- sim_data_h_eta(n = n, p = p, sigma_eps = sigma_eps, h = h,
+                             nburn = nburn)
     },
     stop("Design not recognized.")
   ) # end switch
@@ -305,6 +309,38 @@ sim_data_h <- function(n = 100, p = 4, sigma_eps = 0.1, h = 0.1,
   for (t in 2:n_tot) {
     stds_ylag <- stds_eps_ylag(ylag = ylong[, t - 1], h = h)
     eps[, t] <- sigma_eps * stds_ylag * normals[, t]
+    ylong[, t] <- as.matrix(theta %*% ylong[, t - 1] + eps[, t])
+  }
+  # Note: as.matrix used to allow storage
+  y0ton <- t(ylong[, (nburn + 1):n_tot])
+  return(y0ton)
+}
+
+# == DESIGN H2 HELPER FUNCTIONS == #
+stds_eps_etalag <- function(etalag, h) {
+  p <- length(etalag)
+  stds_etalag <- numeric(p)
+  for (i in 1:(p - 1)) {
+    stds_etalag[i] <-
+      min(exp(- h * abs(etalag[i]) + h * abs(etalag[i + 1])), 100)
+  }
+  stds_etalag[p] <- min(exp(- h * abs(etalag[p]) + h * abs(etalag[1])), 100)
+  return(stds_etalag)
+}
+
+sim_data_h_eta <- function(n = 100, p = 4, sigma_eps = 0.1, h = 0.1,
+                           nburn = 10000) {
+  n_tot <- nburn + 1 + n
+  yinit <- matrix(0, p, 1)      # p x 1 initial values (zeros)
+  ylong <- matrix(NA, p, n_tot) # p x n_tot outcome matrix
+  ylong[, 1] <- yinit           # initiate from all zeros
+  etas <- matrix(rnorm(p * n_tot), p, n_tot) # p x n_tot std. normals
+  eps <- matrix(NA, p, n_tot)    # p x n_tot indep. innovations
+  # Note: first epsilon not actually in use: kept for simple indexing.
+  theta <- coef_mat_a(p)
+  for (t in 2:n_tot) {
+    stds_etalag <- stds_eps_etalag(etalag = etas[, t - 1], h = h)
+    eps[, t] <- sigma_eps * stds_etalag * etas[, t]
     ylong[, t] <- as.matrix(theta %*% ylong[, t - 1] + eps[, t])
   }
   # Note: as.matrix used to allow storage
