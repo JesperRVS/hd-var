@@ -9,7 +9,8 @@ lapply(libplt, require, character.only = TRUE)
 # devtools::install_github("stefano-meschiari/latex2exp") # to get ell in TeX
 
 # Load workspace
-load("simulations_workspace_80_MC_100_to_500_n_4_to_64_p_3_h_dot9_rho_with_num_upd_LINUX.RData")
+load("simulations_workspace_240_MC_100_to_500_n_16_to_64_p_with_num_upd_LINUX_het_eta_2_no_min.RData")
+# load("simulations_workspace_1000_MC_200_to_1000_n_16_to_128_p_3_h_dot9_rho_with_num_upd_LINUX.RData")
 # load("simulations_workspace_100_MC_100_to_500_n_4_to_64_p_3_h_dot9_rho_with_num_upd.RData")
 # load("simulations_workspace_50_MC_100_to_500_n_4_to_64_p_3_h_dot9_rho_with_num_upd.Rdata")
 # load("simulations_workspace_80_MC_100_to_500_n_16_to_128_p_3_h_LINUX_with_num_upd.RData")
@@ -97,9 +98,6 @@ met_lab <- function(string) {
 }
 # Rewrite met_lab to only return the formatted strings
 
-
-
-
 # Specify statistics to plot and methods to include
 stats_plt <- c("mean", "median", "q90", "q95") # statistics to plot
 # stats_plt <- c("max", "mean", "median", "q90", "sd") # statistics to plot
@@ -143,6 +141,60 @@ linetype_order <- c("solid", "dashed", "dotdash",
                     "dotted", "longdash", "twodash")
 
 # Function to plot error statistics as method (cols) by design (rows)
+t_str <- " of $\\max_{i\\in[p]}\\|\\widehat{\\beta}_i-\\beta_{{0}{i}}\\|_{\\ell_2}$"
+
+plot_stat_p_by_design <- function(stat, met_plt, des_plt) {
+  where_des_plt <- which_designs(des_plt)
+  where_met_plt <- which_methods(met_plt)
+  stat_max_ell2 <- apply(max_ell2_errors, c(2, 3, 4, 5), stat_fctn(stat))
+  stat_max_ell2_plt <- stat_max_ell2[, , where_des_plt, where_met_plt]
+  df <- reshape::melt(stat_max_ell2_plt)
+  g <- guide_legend()
+  plt <- ggplot(df, aes(x = n, y = value)) +
+    geom_line(aes(linetype = method, color = method), linewidth = 0.5) +
+    geom_point(aes(shape = method, color = method), size = 2) +
+    scale_shape(solid = FALSE) +
+    # geom_hline(yintercept = 1, linetype = "dotted", color = "black") +
+    ggh4x::facet_grid2(design ~ p,
+                       labeller = labeller(p = plab, design = des_lab,
+                                           method = met_lab),
+                       scales = "free_y") +
+    facetted_pos_scales(
+          y = list(
+            design == "BlockDiag" ~
+              scale_y_continuous(limits = c(NA, 1.5),
+                                breaks = scales::breaks_extended(n = 5)),
+            design != "BlockDiag" ~
+              scale_y_continuous(breaks = scales::breaks_extended(n = 5))
+          )
+        ) +
+    labs(
+      x = TeX(r"($n$)"),
+      y = TeX(paste0("Monte Carlo ", stat_string(stat), t_str))
+    ) +
+    theme_bw() +
+    theme(#legend.justification = c(1, 1), legend.position = c(1, 1),
+          legend.position = "bottom",
+          # legend.key = element_rect(colour = "transparent", fill = NA),
+          legend.box.background = element_rect(colour = "black"),
+          legend.title = element_blank(),
+          legend.text = element_text(size = rel(.75)),
+          legend.margin = margin(c(0, 0, 0, 0), unit = "mm"),
+          legend.spacing = unit(0, "mm"),
+          legend.spacing.x = unit(0, "mm"),
+          legend.spacing.y = unit(0, "mm"),
+          panel.spacing.y = unit(3, "mm"),
+          plot.title = element_text(size = rel(0.5)),
+          plot.caption = element_text(hjust = 0, size = rel(0.5))
+    ) +
+    scale_colour_manual(values = cb_palette) +
+    scale_shape_manual(values = shape_order) +
+    scale_linetype_manual(values = linetype_order) +
+    guides(color = g, shape = g, linetype = g)
+  return(plt)
+}
+
+# Function to plot error statistics as method (cols) by design (rows)
 t_str <- " of $\\max_{i\\in[p]}\\|\\widehat{\\beta}_i-\\beta_{{0}{i}}\\|_{\\ell_2}$ Relative to that of Lasso"
 
 plot_rel_stat_p_by_design <- function(stat, met_plt, des_plt) {
@@ -159,6 +211,8 @@ plot_rel_stat_p_by_design <- function(stat, met_plt, des_plt) {
     }
   }
   rel_stat_max_ell2_plt <- rel_stat_max_ell2_plt[, , , -1] #  drop Lasso (all 1)
+  # levels(rel_stat_max_ell2_plt$method) <-
+  #   met_lab(levels(rel_stat_max_ell2_plt$method))
   df <- reshape::melt(rel_stat_max_ell2_plt)
   g <- guide_legend()
   plt <- ggplot(df, aes(x = n, y = value)) +
@@ -170,15 +224,15 @@ plot_rel_stat_p_by_design <- function(stat, met_plt, des_plt) {
                        labeller = labeller(p = plab, design = des_lab,
                                            method = met_lab),
                        scales = "free_y") +
-    # facetted_pos_scales(
-    #       y = list(
-    #         design == "BlockDiag" ~
-    #           scale_y_continuous(limits = c(NA, 1.4),
-    #                             breaks = scales::breaks_extended(n = 5)),
-    #         design != "BlockDiag" ~
-    #           scale_y_continuous(breaks = scales::breaks_extended(n = 5))
-    #       )
-    #     ) +
+    facetted_pos_scales(
+          y = list(
+            design == "BlockDiag" ~
+              scale_y_continuous(limits = c(NA, 1.5),
+                                breaks = scales::breaks_extended(n = 5)),
+            design != "BlockDiag" ~
+              scale_y_continuous(breaks = scales::breaks_extended(n = 5))
+          )
+        ) +
     labs(
       x = TeX(r"($n$)"),
       y = TeX(paste0("Monte Carlo ", stat_string(stat), t_str))
@@ -209,13 +263,28 @@ plot_rel_stat_p_by_design <- function(stat, met_plt, des_plt) {
 # met_plt <- c("Lasso", "PostLasso", "SqrtLasso", "PostSqrtLasso", "BICLasso", "PostBICLasso")
 # des_plt <- c("Diagonal", "Correlated")
 # met_plt <- c("Lasso", "PostLasso", "SqrtLasso", "BICLasso")
-met_plt <- c("Lasso", "PostLasso", "SqrtLasso", "BICLasso", "PostBICLasso")
-des_plt <- c("Diagonal", "BlockDiag", "NearBand", "Correlated",
-             "Heteroskedastic_y", "Heteroskedastic_eta", "HeavyTailed")
+met_plt <- c("Lasso", "PostLasso", "SqrtLasso")#, "BICLasso", "PostBICLasso")
+des_plt <- c("Heteroskedastic_y", "Heteroskedastic_eta")
+# des_plt <- c("Diagonal", "BlockDiag", "NearBand", "Correlated",
+#              "Heteroskedastic_y", "Heteroskedastic_eta", "HeavyTailed")
 # met_plt <- c("Lasso", "PostLasso", "SqrtLasso", "PostSqrtLasso", "BICLasso")
 # des_plt <- c("Diagonal", "BlockDiag", "NearBand",
 #              "Correlated", "Heteroskedastic", "HeavyTailed")
-stats_plt <- c("mean", "median", "q90", "q95") # statistics to plot
+
+stats_plt <- c("mean") # statistics to plot
+for (thisstat in seq_along(stats_plt)) {
+  which_stat <- stats_plt[thisstat]
+  plt <- plot_stat_p_by_design(stats_plt[thisstat],
+                               met_plt = met_plt,
+                               des_plt = des_plt)
+  file_name <- paste(stats_plt[thisstat], "_max_ell2_errors_p_by_design_",
+                     nummc, "_MC_", min(nvec), "_to_", max(nvec),
+                     "_n_", min(pvec), "_to_", max(pvec), "_p", sep = "")
+  ggsave(plt, filename = paste0("img/", file_name, ".png"),
+         width = 8, height = 12)
+}
+
+stats_plt <- c("mean") # statistics to plot
 for (thisstat in seq_along(stats_plt)) {
   which_stat <- stats_plt[thisstat]
   plt <- plot_rel_stat_p_by_design(stats_plt[thisstat],

@@ -20,39 +20,36 @@ library("Matrix")
 #'                seed = 1234, r = 1, nburn = 10000)
 #' sim_data_by_design(n = 100, p = 4, design = "NearBand", sigma_eps = 0.1,
 #'               seed = 1234, r = 1, nburn = 10000)
-sim_data_by_design <- function(n = 100, p = 4, design, sigma_eps = 0.1,
-                               rho = 0.9, h = 0.1, nburn = 10000) {
+sim_data_by_design <- function(n = 100, p = 4, design, nburn = 10000) {
   switch(design,
     # Diagonal design w/ independent Gaussian innovations
     "Diagonal" = {
       data <- sim_data_a(n = n, p = p, family = "gaussian",
-                         sigma_eps = sigma_eps, rho = 0, nburn = nburn)
+                         sigma_eps = 0.1, rho = 0, nburn = nburn)
     },
     # Diagonal design w/ correlated Gaussian innovations
     "Correlated" = {
       data <- sim_data_a(n = n, p = p, family = "gaussian",
-                         sigma_eps = sigma_eps, rho = rho, nburn = nburn)
+                         sigma_eps = 0.1, rho = 0.9, nburn = nburn)
     },
     # Diagonal design w/ independent Student-t innovations
     "HeavyTailed" = {
       data <- sim_data_a(n = n, p = p, family = "student",
-                         sigma_eps = sigma_eps, df = 5, nburn = nburn)
+                         sigma_eps = 0.1, df = 5, nburn = nburn)
     },
     # Block diagonal design w/ independent Gaussian innovations
     "BlockDiag" = {
-      data <- sim_data_b(n = n, p = p, sigma_eps = sigma_eps, nburn = nburn)
+      data <- sim_data_b(n = n, p = p, sigma_eps = 0.1, nburn = nburn)
     },
     # Near-band design w/ independent Gaussian innovations
     "NearBand" = {
-      data <- sim_data_c(n = n, p = p, sigma_eps = sigma_eps, nburn = nburn)
+      data <- sim_data_c(n = n, p = p, sigma_eps = 0.1, nburn = nburn)
     },
     "Heteroskedastic_y" = {
-      data <- sim_data_h(n = n, p = p, sigma_eps = sigma_eps, h = h,
-                         nburn = nburn)
+      data <- sim_data_h_y(n = n, p = p, sigma_eps = 0.1, nburn = nburn)
     },
     "Heteroskedastic_eta" = {
-      data <- sim_data_h_eta(n = n, p = p, sigma_eps = sigma_eps, h = h,
-                             nburn = nburn)
+      data <- sim_data_h_eta(n = n, p = p, sigma_eps = 0.1, nburn = nburn)
     },
     stop("Design not recognized.")
   ) # end switch
@@ -201,8 +198,8 @@ sim_data_b <- function(n = 100, p = 4, sigma_eps = 0.1, nburn = 10000) {
   # Simulate VAR(4) process
   for (t in 5:n_tot) {
     ylong[, t] <- as.matrix(theta1 %*% ylong[, t - 1] +
-                            theta4 %*% ylong[, t - 4] +
-                            eps[, t])
+                              theta4 %*% ylong[, t - 4] +
+                              eps[, t])
   }
   # Note: as.matrix used to allow storage
   yminus3ton <- t(ylong[, (nburn + 1):n_tot]) # p x (q + n) after burn-in
@@ -239,8 +236,6 @@ coef_mat_b <- function(p) {
 #   n:          Effective sample size, positive integer
 #   p:          System dimension, positive integer
 #   sigma_eps:  Std.dev of eps_0,i (which are indep. gaussian)
-#   seed:       Seed for RNG
-#   r:          MC iter, integer
 #   nburn:      No. of burn-in periods, integer
 # OUTPUT:
 #   y0ton: (1+n) x p outcome matrix (after burn-in)
@@ -277,27 +272,14 @@ coef_mat_c <- function(p) {
     }
   }
   tri_up <- Matrix::triu(theta_temp, 1) # strict upper triangle
-  di <- diag(x = a, nrow = p, ncol = p) # diagonal matrix       
-  # di <- Matrix::Diagonal(n = p, x = a)  # diagonal (sparse)
+  di <- diag(x = a, nrow = p, ncol = p) # diagonal matrix
   theta <- di + tri_up + t(tri_up)      # symmetrize
   return(theta)
 }
 
-## == DESIGN H(ETEROSKEDASTIC) == ##
-
-## == DESIGN H HELPER FUNCTIONS == ##
-stds_eps_ylag <- function(ylag, h) {
-  p <- length(ylag)
-  stds_ylag <- numeric(p)
-  for (i in 1:(p - 1)) {
-    stds_ylag[i] <- min(exp(- h * abs(ylag[i]) + h * abs(ylag[i + 1])), 100)
-  }
-  stds_ylag[p] <- min(exp(- h * abs(ylag[p]) + h * abs(ylag[1])), 100)
-  return(stds_ylag)
-}
-
-sim_data_h <- function(n = 100, p = 4, sigma_eps = 0.1, h = 0.1,
-                       nburn = 10000) {
+## == DESIGN H(ETEROSKEDASTIC): Heteroskedasticity based on outcomes == ##
+sim_data_h_y <- function(n = 100, p = 4, sigma_eps = 0.1, h = 3,
+                         nburn = 10000) {
   n_tot <- nburn + 1 + n
   yinit <- matrix(0, p, 1)      # p x 1 initial values (zeros)
   ylong <- matrix(NA, p, n_tot) # p x n_tot outcome matrix
@@ -316,19 +298,19 @@ sim_data_h <- function(n = 100, p = 4, sigma_eps = 0.1, h = 0.1,
   return(y0ton)
 }
 
-# == DESIGN H2 HELPER FUNCTIONS == #
-stds_eps_etalag <- function(etalag, h) {
-  p <- length(etalag)
-  stds_etalag <- numeric(p)
+## == DESIGN H HELPER FUNCTIONS == ##
+stds_eps_ylag <- function(ylag, h) {
+  p <- length(ylag)
+  stds_ylag <- numeric(p)
   for (i in 1:(p - 1)) {
-    stds_etalag[i] <-
-      min(exp(- h * abs(etalag[i]) + h * abs(etalag[i + 1])), 100)
+    stds_ylag[i] <- min(exp(- h * abs(ylag[i]) + h * abs(ylag[i + 1])), 100)
   }
-  stds_etalag[p] <- min(exp(- h * abs(etalag[p]) + h * abs(etalag[1])), 100)
-  return(stds_etalag)
+  stds_ylag[p] <- min(exp(- h * abs(ylag[p]) + h * abs(ylag[1])), 100)
+  return(stds_ylag)
 }
 
-sim_data_h_eta <- function(n = 100, p = 4, sigma_eps = 0.1, h = 0.1,
+## == DESIGN H(ETEROSKEDASTIC)2: Heteroskedasticity based on unobservables == ##
+sim_data_h_eta <- function(n = 100, p = 4, sigma_eps = 0.1, h = 1.5,
                            nburn = 10000) {
   n_tot <- nburn + 1 + n
   yinit <- matrix(0, p, 1)      # p x 1 initial values (zeros)
@@ -338,6 +320,7 @@ sim_data_h_eta <- function(n = 100, p = 4, sigma_eps = 0.1, h = 0.1,
   eps <- matrix(NA, p, n_tot)    # p x n_tot indep. innovations
   # Note: first epsilon not actually in use: kept for simple indexing.
   theta <- coef_mat_a(p)
+  # theta <- coef_mat_c(p)
   for (t in 2:n_tot) {
     stds_etalag <- stds_eps_etalag(etalag = etas[, t - 1], h = h)
     eps[, t] <- sigma_eps * stds_etalag * etas[, t]
@@ -346,4 +329,18 @@ sim_data_h_eta <- function(n = 100, p = 4, sigma_eps = 0.1, h = 0.1,
   # Note: as.matrix used to allow storage
   y0ton <- t(ylong[, (nburn + 1):n_tot])
   return(y0ton)
+}
+
+# == DESIGN H2 HELPER FUNCTIONS == #
+stds_eps_etalag <- function(etalag, h) {
+  p <- length(etalag)
+  stds_etalag <- numeric(p)
+  for (i in 1:(p - 1)) {
+    stds_etalag[i] <-
+      exp(- h * abs(etalag[i]) + h * abs(etalag[i + 1]))
+      # min(exp(- h * abs(etalag[i]) + h * abs(etalag[i + 1])), 100)
+  }
+  stds_etalag[p] <- exp(- h * abs(etalag[p]) + h * abs(etalag[1]))
+    # min(exp(- h * abs(etalag[p]) + h * abs(etalag[1])), 100)
+  return(stds_etalag)
 }
