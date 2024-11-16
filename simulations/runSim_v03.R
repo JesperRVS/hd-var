@@ -10,14 +10,14 @@ if (Sys.info()[["sysname"]] == "Linux") {
   setwd("..") # if on Linux server, back up to parent folder
 }
 
-testrun <- TRUE # whether to run a test simulation
+testrun <- FALSE # whether to run a test simulation
 
 # Simulation settings
 if (testrun) {
   nvec <- seq(from = 100, to = 500, by = 100)
-  pvec <- c(16, 32, 64)
-  designs <- c(#"Diagonal", "Correlated", "HeavyTailed",
-               #"BlockDiag", "NearBand",
+  pvec <- c(16, 32, 64, 128)
+  designs <- c("Diagonal", "Correlated", "HeavyTailed",
+               "BlockDiag", "NearBand",
                "Heteroskedastic_y", "Heteroskedastic_eta")
   methods <- c("Lasso", "PostLasso",
                "BICLasso", "PostBICLasso",
