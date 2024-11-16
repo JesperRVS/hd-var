@@ -320,7 +320,6 @@ sim_data_h_eta <- function(n = 100, p = 4, sigma_eps = 0.1, h = 1.5,
   eps <- matrix(NA, p, n_tot)    # p x n_tot indep. innovations
   # Note: first epsilon not actually in use: kept for simple indexing.
   theta <- coef_mat_a(p)
-  # theta <- coef_mat_c(p)
   for (t in 2:n_tot) {
     stds_etalag <- stds_eps_etalag(etalag = etas[, t - 1], h = h)
     eps[, t] <- sigma_eps * stds_etalag * etas[, t]
