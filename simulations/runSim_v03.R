@@ -25,7 +25,7 @@ if (testrun) {
   nburn <- 100
   nummc <- 240 # no. MC repetitions
 } else {
-  nvec <- seq(from = 200, to = 1000, by = 200)
+  nvec <- seq(from = 100, to = 1000, by = 100)
   # nvec <- seq(from = 100, to = 1000, by = 100) # TODO
   pvec <- c(16, 32, 64, 128)
   designs <- c("Diagonal", "Correlated", "HeavyTailed",
