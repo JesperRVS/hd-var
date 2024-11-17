@@ -9,7 +9,7 @@ lapply(libplt, require, character.only = TRUE)
 # devtools::install_github("stefano-meschiari/latex2exp") # to get ell in TeX
 
 # Load workspace
-load("simulations_workspace_240_MC_100_to_500_n_16_to_128_p_with_num_upd_LINUX_het_y_3_het_eta_1dot5_no_min.RData")
+load("simulations_workspace_1000_MC_200_to_1000_n_16_to_128_p_with_num_upd_LINUX_het_y_3_het_eta_1dot5_no_min.RData")
 # load("simulations_workspace_1000_MC_200_to_1000_n_16_to_128_p_3_h_dot9_rho_with_num_upd_LINUX.RData")
 # load("simulations_workspace_100_MC_100_to_500_n_4_to_64_p_3_h_dot9_rho_with_num_upd.RData")
 # load("simulations_workspace_50_MC_100_to_500_n_4_to_64_p_3_h_dot9_rho_with_num_upd.Rdata")
@@ -199,16 +199,26 @@ plot_rel_stat_p_by_design <- function(stat, met_plt, des_plt) {
   where_des_plt <- which_designs(des_plt)
   where_met_plt <- which_methods(met_plt)
   stat_max_ell2 <- apply(max_ell2_errors, c(2, 3, 4, 5), stat_fctn(stat))
-  stat_max_ell2_plt <- stat_max_ell2[, , where_des_plt, where_met_plt]
-  rel_stat_max_ell2_plt <- array(NA, dim(stat_max_ell2_plt))
-  dimnames(rel_stat_max_ell2_plt) <- dimnames(stat_max_ell2_plt)
-  for (i in seq_along(where_des_plt)) {
-    for (j in seq_along(where_met_plt)) {
-      rel_stat_max_ell2_plt[, , i, j] <- stat_max_ell2_plt[, , i, j] /
-                                         stat_max_ell2_plt[, , i, 1] # <- Lasso
+  rel_stat_max_ell2 <- array(NA, dim(stat_max_ell2))
+  dimnames(rel_stat_max_ell2) <- dimnames(stat_max_ell2)
+  for (des in designs) {
+    for (met in methods) {
+      rel_stat_max_ell2[, , des, met] <- stat_max_ell2[, , des, met] /
+                                         stat_max_ell2[, , des, "Lasso"]
     }
   }
+  rel_stat_max_ell2_plt <- rel_stat_max_ell2[, , where_des_plt, where_met_plt]
   rel_stat_max_ell2_plt <- rel_stat_max_ell2_plt[, , , -1] #  drop Lasso (all 1)
+  # stat_max_ell2_plt <- stat_max_ell2[, , where_des_plt, where_met_plt]
+  # rel_stat_max_ell2_plt <- array(NA, dim(stat_max_ell2_plt))
+  # dimnames(rel_stat_max_ell2_plt) <- dimnames(stat_max_ell2_plt)
+  # for (i in seq_along(where_des_plt)) {
+  #   for (j in seq_along(where_met_plt)) {
+  #     rel_stat_max_ell2_plt[, , i, j] <- stat_max_ell2_plt[, , i, j] /
+  #                                        stat_max_ell2_plt[, , i, 1] # <- Lasso
+  #   }
+  # }
+  # rel_stat_max_ell2_plt <- rel_stat_max_ell2_plt[, , , -1] #  drop Lasso (all 1)
   # levels(rel_stat_max_ell2_plt$method) <-
   #   met_lab(levels(rel_stat_max_ell2_plt$method))
   df <- reshape::melt(rel_stat_max_ell2_plt)
