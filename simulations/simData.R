@@ -1,4 +1,5 @@
 library("Matrix")
+library("mvtnorm")
 
 #' Simulate data according to a given design
 #'
@@ -24,32 +25,36 @@ sim_data_by_design <- function(n = 100, p = 4, design, nburn = 10000) {
   switch(design,
     # Diagonal design w/ independent Gaussian innovations
     "Diagonal" = {
-      data <- sim_data_a(n = n, p = p, family = "gaussian",
-                         sigma_eps = 0.1, rho = 0, nburn = nburn)
-    },
-    # Diagonal design w/ correlated Gaussian innovations
-    "Correlated" = {
-      data <- sim_data_a(n = n, p = p, family = "gaussian",
-                         sigma_eps = 0.1, rho = 0.9, nburn = nburn)
-    },
-    # Diagonal design w/ independent Student-t innovations
-    "HeavyTailed" = {
-      data <- sim_data_a(n = n, p = p, family = "student",
-                         sigma_eps = 0.1, df = 5, nburn = nburn)
-    },
-    # Block diagonal design w/ independent Gaussian innovations
-    "BlockDiag" = {
-      data <- sim_data_b(n = n, p = p, sigma_eps = 0.1, nburn = nburn)
+      data <- sim_data_diag(n = n, p = p, coef = 0.5, family = "gaussian",
+                            sigma_eps = 0.1, rho = 0, nburn = nburn)
     },
     # Near-band design w/ independent Gaussian innovations
     "NearBand" = {
-      data <- sim_data_c(n = n, p = p, sigma_eps = 0.1, nburn = nburn)
+      data <- sim_data_toep(n = n, p = p, sigma_eps = 0.1, nburn = nburn)
     },
-    "Heteroskedastic_y" = {
-      data <- sim_data_h_y(n = n, p = p, sigma_eps = 0.1, nburn = nburn)
+    # Block diagonal design w/ independent Gaussian innovations
+    "BlockDiag" = {
+      data <- sim_data_block(n = n, p = p, sigma_eps = 0.1, nburn = nburn)
     },
-    "Heteroskedastic_eta" = {
-      data <- sim_data_h_eta(n = n, p = p, sigma_eps = 0.1, nburn = nburn)
+    # Diagonal design w/ correlated Gaussian innovations
+    "Correlated" = {
+      data <- sim_data_diag(n = n, p = p, coef = 0.5, family = "gaussian",
+                            sigma_eps = 0.1, rho = 0.9, nburn = nburn)
+    },
+    # Diagonal design w/ correlated Student-t innovations
+    "HeavyTailed" = {
+      data <- sim_data_diag(n = n, p = p, coef = 0.5, family = "student",
+                            sigma_eps = 0.1, rho = 0.9, df = 5, nburn = nburn)
+    },
+    # Diagonal design w/ heteroskedastic innovations
+    "Heteroskedastic" = {
+      data <- sim_data_hetero(n = n, p = p, sigma_eps = 0.1, nburn = nburn)
+    },
+    # Near-unity design w/ independent Gaussian innovations
+    "NearUnity" = {
+      data <- sim_data_diag(n = n, p = p, coef = 1 - (5 / n),
+                            family = "gaussian", sigma_eps = 0.1, rho = 0,
+                            nburn = nburn)
     },
     stop("Design not recognized.")
   ) # end switch
@@ -58,11 +63,9 @@ sim_data_by_design <- function(n = 100, p = 4, design, nburn = 10000) {
 
 ### == DESIGNS == ###
 
-## == DESIGN A == ##
+## == DIAGONAL DESIGN(S) == ##
 # Simulate data using variations of Kock & Callot's [2015 J Economet]
-# Experimental Design A.
-
-# Diagonal coefficient matrix design
+# Experimental Design A, which has a diagonal coefficient matrix.
 # INPUTS:
 #   n:          Effective sample size, integer
 #   p:          System dimension, divisible by four
@@ -70,13 +73,12 @@ sim_data_by_design <- function(n = 100, p = 4, design, nburn = 10000) {
 #   rho:        Correlation between eps_0,i and eps_0,j, i != j
 #               (if "gaussian")
 #   family:     Distribution of eps_0i, "gaussian" or "student"
-#   df:         Degrees of freedom for t dist (if "student")
+#   df:         Degrees of freedom for t dist (only relevant if "student")
 #   nburn:      No. of burn-in periods
 # OUTPUT:
 #   y0ton:      (1 + n) x p outcome matrix (after burn-in)
-sim_data_a <- function(n = 100, p = 4,
-                       family = "gaussian", sigma_eps = 0.1, rho = 0, df = 3,
-                       nburn = 10000) {
+sim_data_diag <- function(n = 100, p = 4, coef = 0.5, family = "gaussian",
+                          sigma_eps = 0.1, rho = 0, df = 3, nburn = 10000) {
   n_tot <- nburn + 1 + n          # total no. of periods
   # Simulate n_tot x p innovations
   eps <- sim_eps(n = n_tot, p = p, family = family,
@@ -86,7 +88,7 @@ sim_data_a <- function(n = 100, p = 4,
   yinit <- matrix(0, p, 1)        # p x 1 initial values (zeros)
   ylong <- matrix(NA, p, n_tot)   # p x n_tot outcome matrix
   ylong[, 1] <- yinit             # initiate from all zeros
-  theta <- coef_mat_a(p)  # specify coef matrix (diagonal, sparse)
+  theta <- coef_mat_diag(p = p, coef = coef) # coef matrix (diagonal, sparse)
   for (t in 2:n_tot) {
     ylong[, t] <- as.matrix(theta %*% ylong[, t - 1] + eps[, t])
   }
@@ -94,44 +96,43 @@ sim_data_a <- function(n = 100, p = 4,
   return(y0ton)
 }
 
-## == DESIGN A HELPER FUNCTIONS == ##
+## == DIAGONAL DESIGN(S) HELPER FUNCTIONS == ##
 
 # Coefficient matrix for the VAR(1) process
 # INPUTS:
-#   theta:      VAR(1) coefficient, scalar
 #   p:          System dimension, integer
+#   coef:       VAR(1) coefficient, scalar
 # OUTPUT:
 #   theta:      p x p VAR(1) coefficient matrix (diagonal, sparse)
-coef_mat_a <- function(p) {
-  theta <- 0.5
-  m <- Matrix::Diagonal(n = p, x = theta)
+coef_mat_diag <- function(p, coef) {
+  m <- Matrix::Diagonal(n = p, x = coef)
   return(m)
 }
 
-# Simulate either possibly correlated Gaussian innovations or independent
-# Student-t innovations
+# Simulate either possibly correlated Gaussian/Student innovations
 # INPUTS:
 #   n:          Sample size, integer
 #   p:          System dimension, integer
 #   sigma_eps:  Std.dev of eps_0,i (if gaussian)
 #   rho:        Correlation between eps_0,i and eps_0,j, i != j
-#               (if "gaussian")
 #   family:     Distribution of eps_0i, "gaussian" or "student"
-#   df:         Degrees of freedom for t dist (if "student")
+#   df:         Degrees of freedom for t dist (only relevant if "student")
 # OUTPUT:
 #   eps:        n x p innovation matrix
 sim_eps <- function(n = 100, p = 4, family = "gaussian",
                     sigma_eps = 0.1, rho = 0, df = NULL) {
+  cor_eps <- cor_mat(p, rho)                        # innovation covariance
   switch(family,
     "gaussian" = {
-      cor_eps <- cor_mat(p, rho)                    # innovation covariance
       normals <- matrix(rnorm(n * p), n, p)         # n x p indep. normals
       eps <- sigma_eps * normals %*% chol(cor_eps)  # n x p correlated normals
     },
     "student" = {
+      students <- mvtnorm::rmvt(n, sigma = cor_eps, df = df) # n x p
+      # ^-- draws from multivariate (central) t w/ df=nu, scale=sigma
       nrmlzr <- sqrt(df / (df - 2))                 # normalizing constant
-      students <- matrix(rt(n * p, df), n, p)       # n x p indep. t(df) dist
-      eps <- (sigma_eps / nrmlzr) * students        # => var = sigma_eps^2
+      eps <- (sigma_eps / nrmlzr) * students        # n x p scaled mult. t
+      # => cov(eps) = sigma_eps^2 * cor_eps
     },
     stop("Family not recognized.")
   )
@@ -149,31 +150,56 @@ cor_mat <- function(p, rho) {
   return(sigma)
 }
 
-# # Innovation correlation matrix, Toeplitz structure
-# # INPUTS:
-# #   p:          System dimension, integer
-# #   rho:        Level of correlation between eps_0,i and eps_0,j, i != j
-# # OUTPUT:
-# #   sigma:      p x p innovation correlation matrix
-# cor_mat <- function(p, rho) {
-#   sigma_temp <- matrix(0, p, p)
-#   for (j in 1:(p - 1)) {
-#     for (k in (j + 1):p) {
-#       sigma_temp[j, k] <- rho^(abs(j - k))
-#     }
-#   }
-#   tri_up <- Matrix::triu(sigma_temp, 1) # strict upper triangle
-#   sigma <- diag(p) + tri_up + t(tri_up) # symmetrize
-#   # sigma <- Matrix::Diagonal(p) + tri_up + t(tri_up) # NOT A MATRIX?
-#   return(sigma)
-# }
+## == NEAR-BAND DESIGN == ##
+# Simulate using essentially Kock & Callot [2015] Experimental Design D.
+# INPUTS:
+#   n:          Effective sample size, positive integer
+#   p:          System dimension, positive integer
+#   sigma_eps:  Std.dev of eps_0,i (which are indep. gaussian)
+#   nburn:      No. of burn-in periods, integer
+# OUTPUT:
+#   y0ton: (1+n) x p outcome matrix (after burn-in)
+sim_data_toep <- function(n = 100, p = 4, sigma_eps = 0.1, nburn = 10000) {
+  n_tot <- nburn + 1 + n
+  yinit <- matrix(0, p, 1)      # p x 1 initial values (zeros)
+  ylong <- matrix(NA, p, n_tot) # p x n_tot outcome matrix
+  ylong[, 1] <- yinit           # initiate from all zeros
+  normals <- matrix(rnorm(p * n_tot), p, n_tot) # p x n_tot std. normals
+  eps <- sigma_eps * normals    # p x n_tot indep. innovations
+  # Note: first epsilon not actually in use: kept for simple indexing.
+  theta <- coef_mat_toep(p)
+  for (t in 2:n_tot) {
+    ylong[, t] <- as.matrix(theta %*% ylong[, t - 1] + eps[, t])
+  }
+  # Note: as.matrix used to allow storage
+  y0ton <- t(ylong[, (nburn + 1):n_tot])
+  return(y0ton)
+}
 
-## == DESIGN B == ##
+## == NEAR-BAND DESIGN HELPER FUNCTIONS == ##
 
+# Coefficient matrix for the VAR(1) process
+# INPUT:
+#   p:          System dimension, positive integer
+# OUTPUT:
+#   theta:      p x p coefficient matrix
+coef_mat_toep <- function(p) {
+  a <- 0.4                          # parameter (hardcoded)
+  theta_temp <- matrix(NA, p, p)    # p x p temporary matrix
+  for (i in 1:(p - 1)) {            # fill in strict upper triangle
+    for (j in 2:p) {
+      theta_temp[i, j] <- ((-1)^(abs(i - j))) * (a^(abs(i - j) + 1))
+    }
+  }
+  tri_up <- Matrix::triu(theta_temp, 1) # strict upper triangle
+  di <- diag(x = a, nrow = p, ncol = p) # diagonal matrix
+  theta <- di + tri_up + t(tri_up)      # symmetrize
+  return(theta)
+}
+
+## == BLOCK-DIAGONAL DESIGN == ##
 # Simulate using essentially Kock & Callot [2015] Experimental Design B.
-
-# Note: Since our dimensions (p) are all even, we use blocks of four instead of
-# the five in Kock & Callot.
+# Note: We use blocks of four instead of the five in Kock & Callot.
 # INPUTS:
 #   n:          Effective sample size, integer
 #   p:          System dimension, divisible by four.
@@ -183,16 +209,16 @@ cor_mat <- function(p, rho) {
 #   nburn:      No. of burn-in periods
 # OUTPUT:
 #   yminus3ton: (4 + n) x p outcome matrix (after burn-in)
-sim_data_b <- function(n = 100, p = 4, sigma_eps = 0.1, nburn = 10000) {
-  q <- 4                # number of lags (hardcoded)
+sim_data_block <- function(n = 100, p = 4, sigma_eps = 0.1, nburn = 10000) {
+  q <- 4                          # number of lags (hardcoded)
   n_tot <- nburn + q + n          # total no. of periods
   yinit <- matrix(0, p, q)        # p x q initial values (zeros)
   ylong <- matrix(NA, p, n_tot)   # p x n_tot outcome matrix
   ylong[, 1:q] <- yinit           # initiate from all zeros
   normals <- matrix(rnorm(p * n_tot), p, n_tot) # p x n_tot indep. normals
-  eps <- sigma_eps * normals      # p x n_tot indep. gaussian innovations
+  eps <- sigma_eps * normals      # p x n_tot indep. Gaussian innovations
   # Note: first 4 epsilons not actually in use: kept for simple indexing.
-  theta <- coef_mat_b(p)                      # p x 4p coef matrix
+  theta <- coef_mat_block(p)                # p x 4p coef matrix
   theta1 <- theta[, 1:p]                    # p x p block diagonal
   theta4 <- theta[, (3 * p + 1):(4 * p)]    # p x p block diagonal
   # Simulate VAR(4) process
@@ -206,14 +232,13 @@ sim_data_b <- function(n = 100, p = 4, sigma_eps = 0.1, nburn = 10000) {
   return(yminus3ton)
 }
 
-## == DESIGN B HELPER FUNCTIONS == ##
-
+## == BLOCK-DIAGONAL HELPER FUNCTIONS == ##
 # Coefficient matrix for the VAR(4) process
 # INPUT:
 #   p:          System dimension, divisible by four
 # OUTPUT:
 #   theta:      p x 4p coefficient matrix
-coef_mat_b <- function(p) {
+coef_mat_block <- function(p) {
   if (p %% 4 != 0) {
     warning("p should be divisible by four.")
   }
@@ -228,98 +253,19 @@ coef_mat_b <- function(p) {
   return(theta)
 }
 
-## == DESIGN C == ##
-
-# Simulate using essentially Kock & Callot [2015] Experimental Design D (which
-# we here renamed to C).
-# INPUTS:
-#   n:          Effective sample size, positive integer
-#   p:          System dimension, positive integer
-#   sigma_eps:  Std.dev of eps_0,i (which are indep. gaussian)
-#   nburn:      No. of burn-in periods, integer
-# OUTPUT:
-#   y0ton: (1+n) x p outcome matrix (after burn-in)
-sim_data_c <- function(n = 100, p = 4, sigma_eps = 0.1, nburn = 10000) {
-  n_tot <- nburn + 1 + n
-  yinit <- matrix(0, p, 1)      # p x 1 initial values (zeros)
-  ylong <- matrix(NA, p, n_tot) # p x n_tot outcome matrix
-  ylong[, 1] <- yinit           # initiate from all zeros
-  normals <- matrix(rnorm(p * n_tot), p, n_tot) # p x n_tot std. normals
-  eps <- sigma_eps * normals    # p x n_tot indep. innovations
-  # Note: first epsilon not actually in use: kept for simple indexing.
-  theta <- coef_mat_c(p)
-  for (t in 2:n_tot) {
-    ylong[, t] <- as.matrix(theta %*% ylong[, t - 1] + eps[, t])
-  }
-  # Note: as.matrix used to allow storage
-  y0ton <- t(ylong[, (nburn + 1):n_tot])
-  return(y0ton)
-}
-
-## == DESIGN C HELPER FUNCTIONS == ##
-
-# Coefficient matrix for the VAR(1) process
-# INPUT:
-#   p:          System dimension, positive integer
-# OUTPUT:
-#   theta:      p x p coefficient matrix
-coef_mat_c <- function(p) {
-  a <- 0.4                          # parameter (hardcoded)
-  theta_temp <- matrix(NA, p, p)    # p x p temporary matrix
-  for (i in 1:(p - 1)) {            # fill in strict upper triangle
-    for (j in 2:p) {
-      theta_temp[i, j] <- ((-1)^(abs(i - j))) * (a^(abs(i - j) + 1))
-    }
-  }
-  tri_up <- Matrix::triu(theta_temp, 1) # strict upper triangle
-  di <- diag(x = a, nrow = p, ncol = p) # diagonal matrix
-  theta <- di + tri_up + t(tri_up)      # symmetrize
-  return(theta)
-}
-
-## == DESIGN H(ETEROSKEDASTIC): Heteroskedasticity based on outcomes == ##
-sim_data_h_y <- function(n = 100, p = 4, sigma_eps = 0.1, h = 3,
-                         nburn = 10000) {
-  n_tot <- nburn + 1 + n
-  yinit <- matrix(0, p, 1)      # p x 1 initial values (zeros)
-  ylong <- matrix(NA, p, n_tot) # p x n_tot outcome matrix
-  ylong[, 1] <- yinit           # initiate from all zeros
-  normals <- matrix(rnorm(p * n_tot), p, n_tot) # p x n_tot std. normals
-  eps <- matrix(NA, p, n_tot)    # p x n_tot indep. innovations
-  # Note: first epsilon not actually in use: kept for simple indexing.
-  theta <- coef_mat_a(p)
-  for (t in 2:n_tot) {
-    stds_ylag <- stds_eps_ylag(ylag = ylong[, t - 1], h = h)
-    eps[, t] <- sigma_eps * stds_ylag * normals[, t]
-    ylong[, t] <- as.matrix(theta %*% ylong[, t - 1] + eps[, t])
-  }
-  # Note: as.matrix used to allow storage
-  y0ton <- t(ylong[, (nburn + 1):n_tot])
-  return(y0ton)
-}
-
-## == DESIGN H HELPER FUNCTIONS == ##
-stds_eps_ylag <- function(ylag, h) {
-  p <- length(ylag)
-  stds_ylag <- numeric(p)
-  for (i in 1:(p - 1)) {
-    stds_ylag[i] <- min(exp(- h * abs(ylag[i]) + h * abs(ylag[i + 1])), 100)
-  }
-  stds_ylag[p] <- min(exp(- h * abs(ylag[p]) + h * abs(ylag[1])), 100)
-  return(stds_ylag)
-}
-
-## == DESIGN H(ETEROSKEDASTIC)2: Heteroskedasticity based on unobservables == ##
-sim_data_h_eta <- function(n = 100, p = 4, sigma_eps = 0.1, h = 1.5,
-                           nburn = 10000) {
+## == HETEROSKEDASTIC DESIGN == ##
+# Simulate from diagonal designs with heteroskedasticity in the (Gaussian)
+# innovations.
+sim_data_hetero <- function(n = 100, p = 4, coef = 0.5,
+                            sigma_eps = 0.1, h = 1.5, nburn = 10000) {
   n_tot <- nburn + 1 + n
   yinit <- matrix(0, p, 1)      # p x 1 initial values (zeros)
   ylong <- matrix(NA, p, n_tot) # p x n_tot outcome matrix
   ylong[, 1] <- yinit           # initiate from all zeros
   etas <- matrix(rnorm(p * n_tot), p, n_tot) # p x n_tot std. normals
   eps <- matrix(NA, p, n_tot)    # p x n_tot indep. innovations
-  # Note: first epsilon not actually in use: kept for simple indexing.
-  theta <- coef_mat_a(p)
+  # Note: first epsilon not actually in use, but kept for simple indexing.
+  theta <- coef_mat_diag(p = p, coef = coef)
   for (t in 2:n_tot) {
     stds_etalag <- stds_eps_etalag(etalag = etas[, t - 1], h = h)
     eps[, t] <- sigma_eps * stds_etalag * etas[, t]
@@ -330,7 +276,7 @@ sim_data_h_eta <- function(n = 100, p = 4, sigma_eps = 0.1, h = 1.5,
   return(y0ton)
 }
 
-# == DESIGN H2 HELPER FUNCTIONS == #
+# == HETEROSKEDASTIC DESIGN HELPER FUNCTIONS == #
 stds_eps_etalag <- function(etalag, h) {
   p <- length(etalag)
   stds_etalag <- numeric(p)

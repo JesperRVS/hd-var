@@ -15,22 +15,20 @@ testrun <- FALSE # whether to run a test simulation
 # Simulation settings
 if (testrun) {
   nvec <- seq(from = 100, to = 500, by = 100)
-  pvec <- c(16, 32, 64, 128)
-  designs <- c("Diagonal", "Correlated", "HeavyTailed",
-               "BlockDiag", "NearBand",
-               "Heteroskedastic_y", "Heteroskedastic_eta")
+  pvec <- c(4, 8, 16)
+  designs <- c("Diagonal", "NearBand", "BlockDiag",
+               "Correlated", "HeavyTailed", "Heteroskedastic", "NearUnity")
   methods <- c("Lasso", "PostLasso",
                "BICLasso", "PostBICLasso",
                "SqrtLasso", "PostSqrtLasso")
   nburn <- 100
   nummc <- 240 # no. MC repetitions
 } else {
-  nvec <- seq(from = 100, to = 1000, by = 100)
+  nvec <- seq(from = 200, to = 1000, by = 200)
   # nvec <- seq(from = 100, to = 1000, by = 100) # TODO
   pvec <- c(16, 32, 64, 128)
-  designs <- c("Diagonal", "Correlated", "HeavyTailed",
-               "BlockDiag", "NearBand",
-               "Heteroskedastic_y", "Heteroskedastic_eta")
+  designs <- c("Diagonal", "NearBand", "BlockDiag",
+               "Correlated", "HeavyTailed", "Heteroskedastic", "NearUnity")
   methods <- c("Lasso", "PostLasso",
                "BICLasso", "PostBICLasso",
                "SqrtLasso", "PostSqrtLasso")
@@ -45,26 +43,28 @@ nummet <- length(methods)
 ## == SOME HELPER FUNCTIONS == ##
 
 q_switch <- function(design) {
-  q <- list(Diagonal = 1, Correlated = 1, HeavyTailed = 1,
-            BlockDiag = 4, NearBand = 1,
-            Heteroskedastic_y = 1, Heteroskedastic_eta = 1)
+  q <- list(Diagonal = 1, NearBand = 1, BlockDiag = 4,
+            Correlated = 1, HeavyTailed = 1, Heteroskedastic = 1,
+            NearUnity = 1)
   return(q[[design]])
 }
 
 # Function to determine the (correct) coefficient matrix Theta
-coef_mat_a <- function(p) {0}
-coef_mat_b <- function(p) {0}
-coef_mat_c <- function(p) {0}
+coef_mat_diag <- function(p) {0}
+coef_mat_toep <- function(p) {0}
+coef_mat_block <- function(p) {0}
 insertSource("simulations/simData.R",
-             functions = c("coef_mat_a", "coef_mat_b", "coef_mat_c"))
-theta_switch <- function(design, p = 4) {
-  if (design %in% c("Diagonal", "Correlated", "HeavyTailed",
-                    "Heteroskedastic_y", "Heteroskedastic_eta")) {
-    theta <- coef_mat_a(p = p)
-  } else if (design == "BlockDiag") {
-    theta <- coef_mat_b(p = p)
+             functions = c("coef_mat_diag", "coef_mat_toep", "coef_mat_block"))
+theta_switch <- function(design, p, n) {
+  if (design %in% c("Diagonal", "Correlated",
+                    "HeavyTailed", "Heteroskedastic")) {
+    theta <- coef_mat_diag(p = p, coef = 0.5)
+  } else if (design == "NearUnity") {
+    theta <- coef_mat_diag(p = p, coef = 1 - (5 / n))
   } else if (design == "NearBand") {
-    theta <- coef_mat_c(p = p)
+    theta <- coef_mat_toep(p = p)
+  } else if (design == "BlockDiag") {
+    theta <- coef_mat_block(p = p)
   } else {
     stop("Design not recognized.")
   }
@@ -113,7 +113,7 @@ for (this_design in seq_along(designs)) {
     n <- nvec[thisn]
     for (thisp in seq_along(pvec)) {
       p <- pvec[thisp]
-      theta <- theta_switch(design, p = p)
+      theta <- theta_switch(design, p = p, n = n)
       print(paste("Design:", design, ", n:", n, ", p:", p))
       results <- foreach(icount(nummc)) %dopar% {
         # GENERATE DATA

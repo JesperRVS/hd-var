@@ -9,7 +9,7 @@ lapply(libplt, require, character.only = TRUE)
 # devtools::install_github("stefano-meschiari/latex2exp") # to get ell in TeX
 
 # Load workspace
-load("simulations_workspace_1000_MC_200_to_1000_n_16_to_128_p_with_num_upd_LINUX_het_y_3_het_eta_1dot5_no_min.RData")
+load("simulations_workspace_240_MC_100_to_500_n_4_to_16_p_with_num_upd.RData")
 # load("simulations_workspace_1000_MC_200_to_1000_n_16_to_128_p_3_h_dot9_rho_with_num_upd_LINUX.RData")
 # load("simulations_workspace_100_MC_100_to_500_n_4_to_64_p_3_h_dot9_rho_with_num_upd.RData")
 # load("simulations_workspace_50_MC_100_to_500_n_4_to_64_p_3_h_dot9_rho_with_num_upd.Rdata")
@@ -39,19 +39,32 @@ which_designs <- function(des_plt) {
 
 # Create labels (via functions) for plots
 plab <- function(string) {
-  sprintf("p = %s", string) # note: labeller expects a string - not integer
+  TeX(sprintf("$p = %s$", string)) # note: labeller expects a string - not integer
 }
 
 des_lab <- function(string) {
-  des_list <- list("Diagonal" = "A: Diagonal, IID Gaussian",
-                   "BlockDiag" = "B: Block diag., IID Gaussian",
-                   "NearBand" = "C: Near band, IID Gaussian",
-                   "Correlated" = "D: Diag., Corr. Gaussian",
-                   "Heteroskedastic_y" = "E: Diag., y-Het. Gaussian",
-                   "Heteroskedastic_eta" = "E: Diag., eta-Het. Gaussian",
-                   "HeavyTailed" = "F: Diag., IID Student's t")
+  des_list <-
+    c("Diagonal" = TeX("$A$: Diagonal, IID Normal"),
+      "NearBand" = TeX("$B$: Near Band, IID Normal"),
+      "BlockDiag" = TeX("$C$: Block Diag, IID Normal"),
+      "Correlated" = TeX("$D$: Diag, Corr Normal"),
+      "HeavyTailed" = TeX("$E$: Diag, Corr Student"),
+      "Heteroskedastic" = TeX("$F$: Diag, Hetero Normal"),
+      "NearUnity" = TeX("$G$: Near Unity, IID Normal$")
+    )
   return(des_list[string])
 }
+
+# des_lab <- function(string) {
+#   des_list <- c("Diagonal" = "A: Diagonal, IID Gaussian",
+#                 "NearBand" = "B: Near-band, IID Gaussian",
+#                 "BlockDiag" = "C: Blocks, IID Gaussian",
+#                 "Correlated" = "D: Diag., Corr. Gaussian",
+#                 "HeavyTailed" = "E: Diag., Corr. Student",
+#                 "Heteroskedastic" = "F: Diag., Hetero. Gaussian",
+#                 "NearUnity" = "G: Near ident., IID Gaussian$")
+#   return(des_list[string])
+# }
 
 # met_lab <- function(string) {
 #   met_list <- list("Lasso" = "Lasso",
@@ -85,18 +98,17 @@ des_lab <- function(string) {
 # Rewrite met_lab to allow for vector of strings
 met_lab <- function(string) {
   met_list <- c("Lasso" = "Lasso",
-                "AICLasso" = "AIC Lasso",
-                "BICLasso" = "BIC Lasso",
-                "HQICLasso" = "HQIC Lasso",
-                "SqrtLasso" = "Square-Root Lasso",
-                "PostLasso" = "Post Lasso",
-                "PostAICLasso" = "Post AIC Lasso",
-                "PostBICLasso" = "Post BIC Lasso",
-                "PostHQICLasso" = "Post HQIC Lasso",
-                "PostSqrtLasso" = "Post Square-Root Lasso")
+                "AICLasso" = "AIC",
+                "BICLasso" = "BIC",
+                "HQICLasso" = "HQIC",
+                "SqrtLasso" = "Sqrt",
+                "PostLasso" = "Post",
+                "PostAICLasso" = "PostAIC",
+                "PostBICLasso" = "PostBIC",
+                "PostHQICLasso" = "PostHQIC",
+                "PostSqrtLasso" = "PostSqrt")
   return(met_list[string])
 }
-# Rewrite met_lab to only return the formatted strings
 
 # Specify statistics to plot and methods to include
 
@@ -135,7 +147,7 @@ shape_order <- c(0, 1, 2, 5, 4, 3)
 # 0=square, 1=circle, 2=triangle, 5=diamond, 4=cross, 3=plus
 
 # Linetype order
-linetype_order <- c("solid", "dashed", "dotdash", 
+linetype_order <- c("solid", "dashed", "dotdash",
                     "dotted", "longdash", "twodash")
 
 # Function to plot error statistics as method (cols) by design (rows)
@@ -144,19 +156,21 @@ t_str_stat <- " of $\\max_{i\\in[p]}\\|\\widehat{\\beta}_i-\\beta_{{0}{i}}\\|_{\
 plot_stat_p_by_design <- function(stat, met_plt, des_plt) {
   where_des_plt <- which_designs(des_plt)
   where_met_plt <- which_methods(met_plt)
+  dimnames(max_ell2_errors)[["p"]] <- plab(dimnames(max_ell2_errors)[["p"]])
+  dimnames(max_ell2_errors)[["design"]] <-
+    des_lab(dimnames(max_ell2_errors)[["design"]])
+  dimnames(max_ell2_errors)[["method"]] <-
+    met_lab(dimnames(max_ell2_errors)[["method"]])
   stat_max_ell2 <- apply(max_ell2_errors, c(2, 3, 4, 5), stat_fctn(stat))
   stat_max_ell2_plt <- stat_max_ell2[, , where_des_plt, where_met_plt]
   df <- reshape::melt(stat_max_ell2_plt)
-  g <- guide_legend()
+  g <- guide_legend(nrow = 1)
   plt <- ggplot(df, aes(x = n, y = value)) +
     geom_line(aes(linetype = method, color = method), linewidth = 0.5) +
     geom_point(aes(shape = method, color = method), size = 2) +
     scale_shape(solid = FALSE) +
     # geom_hline(yintercept = 1, linetype = "dotted", color = "black") +
-    ggh4x::facet_grid2(design ~ p,
-                       labeller = labeller(p = plab, design = des_lab,
-                                           method = met_lab),
-                       scales = "free_y") +
+    ggh4x::facet_grid2(design ~ p, labeller = label_parsed, scales = "free_y") +
     # facetted_pos_scales(
     #       y = list(
     #         design == "BlockDiag" ~
@@ -193,11 +207,12 @@ plot_stat_p_by_design <- function(stat, met_plt, des_plt) {
 }
 
 # Function to plot error statistics as method (cols) by design (rows)
-t_str_rel_stat <- " of $\\max_{i\\in[p]}\\|\\widehat{\\beta}_i-\\beta_{{0}{i}}\\|_{\\ell_2}$ Relative to that of Lasso"
+t_str_rel_stat <- " of $\\max_{i\\in[p]}\\|\\widehat{\\beta}_i-\\beta_{{0}{i}}\\|_{\\ell_2}$ Relative to that of Lasso (= 1)"
 
 plot_rel_stat_p_by_design <- function(stat, met_plt, des_plt) {
   where_des_plt <- which_designs(des_plt)
   where_met_plt <- which_methods(met_plt)
+  dimnames(max_ell2_errors)[["p"]] <- plab(dimnames(max_ell2_errors)[["p"]])
   stat_max_ell2 <- apply(max_ell2_errors, c(2, 3, 4, 5), stat_fctn(stat))
   rel_stat_max_ell2 <- array(NA, dim(stat_max_ell2))
   dimnames(rel_stat_max_ell2) <- dimnames(stat_max_ell2)
@@ -207,6 +222,10 @@ plot_rel_stat_p_by_design <- function(stat, met_plt, des_plt) {
                                          stat_max_ell2[, , des, "Lasso"]
     }
   }
+  dimnames(rel_stat_max_ell2)[["design"]] <-
+    des_lab(dimnames(rel_stat_max_ell2)[["design"]])
+  dimnames(rel_stat_max_ell2)[["method"]] <-
+    met_lab(dimnames(rel_stat_max_ell2)[["method"]])
   rel_stat_max_ell2_plt <- rel_stat_max_ell2[, , where_des_plt, where_met_plt]
   rel_stat_max_ell2_plt <- rel_stat_max_ell2_plt[, , , -1] #  drop Lasso (all 1)
   # stat_max_ell2_plt <- stat_max_ell2[, , where_des_plt, where_met_plt]
@@ -228,10 +247,7 @@ plot_rel_stat_p_by_design <- function(stat, met_plt, des_plt) {
     geom_point(aes(shape = method, color = method), size = 2) +
     scale_shape(solid = FALSE) +
     geom_hline(yintercept = 1, linetype = "dotted", color = "black") +
-    ggh4x::facet_grid2(design ~ p,
-                       labeller = labeller(p = plab, design = des_lab,
-                                           method = met_lab),
-                       scales = "free_y") +
+    ggh4x::facet_grid2(design ~ p, labeller = label_parsed, scales = "free_y") +
     # facetted_pos_scales(
     #       y = list(
     #         design == "BlockDiag" ~
@@ -270,12 +286,14 @@ plot_rel_stat_p_by_design <- function(stat, met_plt, des_plt) {
 # 1. Comparing Lasso, Sqrt-Lasso, Post-Lasso and BIC-Lasso
 # met_plt <- c("Lasso", "PostLasso", "SqrtLasso", "PostSqrtLasso", "BICLasso", "PostBICLasso")
 # des_plt <- c("Diagonal", "Correlated")
-# met_plt <- c("Lasso", "PostLasso", "SqrtLasso", "BICLasso")
-met_plt <- c("Lasso", "PostLasso", "SqrtLasso")#, "PostBICLasso")
+met_plt <- c("Lasso", "PostLasso", "SqrtLasso", "BICLasso",
+             "PostSqrtLasso", "PostBICLasso")
+# met_plt <- c("Lasso", "PostLasso", "SqrtLasso")#, "PostBICLasso")
 # des_plt <- c(#"Diagonal", 
 #              "Heteroskedastic_y", "Heteroskedastic_eta")
-des_plt <- c("Diagonal", "BlockDiag", "NearBand", "Correlated",
-             "Heteroskedastic_y", "Heteroskedastic_eta", "HeavyTailed")
+des_plt <- c("Diagonal", "NearBand", "BlockDiag",
+             "Correlated", "HeavyTailed",
+             "Heteroskedastic", "NearUnity")
 # met_plt <- c("Lasso", "PostLasso", "SqrtLasso", "PostSqrtLasso", "BICLasso")
 # des_plt <- c("Diagonal", "BlockDiag", "NearBand",
 #              "Correlated", "Heteroskedastic", "HeavyTailed")
