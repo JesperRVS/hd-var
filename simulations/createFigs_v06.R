@@ -97,16 +97,16 @@ des_lab <- function(string) {
 # }
 # Rewrite met_lab to allow for vector of strings
 met_lab <- function(string) {
-  met_list <- c("Lasso" = "Lasso",
-                "AICLasso" = "AIC",
-                "BICLasso" = "BIC",
-                "HQICLasso" = "HQIC",
-                "SqrtLasso" = "Sqrt",
-                "PostLasso" = "Post",
-                "PostAICLasso" = "PostAIC",
-                "PostBICLasso" = "PostBIC",
-                "PostHQICLasso" = "PostHQIC",
-                "PostSqrtLasso" = "PostSqrt")
+  met_list <- c("Lasso" = "Weighted Lasso",
+                "AICLasso" = "AIC-Lasso",
+                "BICLasso" = "BIC-Lasso",
+                "HQICLasso" = "HQIC-Lasso",
+                "SqrtLasso" = "Sqrt-Lasso",
+                "PostLasso" = "Post-Lasso",
+                "PostAICLasso" = "Post-AIC-Lasso",
+                "PostBICLasso" = "Post-BIC-Lasso",
+                "PostHQICLasso" = "Post-HQIC-Lasso",
+                "PostSqrtLasso" = "Post-Sqrt-Lasso")
   return(met_list[string])
 }
 
@@ -207,7 +207,7 @@ plot_stat_p_by_design <- function(stat, met_plt, des_plt) {
 }
 
 # Function to plot error statistics as method (cols) by design (rows)
-t_str_rel_stat <- " of $\\max_{i\\in[p]}\\|\\widehat{\\beta}_i-\\beta_{{0}{i}}\\|_{\\ell_2}$ Relative to that of Lasso (= 1)"
+t_str_rel_stat <- " of $\\max_{i\\in[p]}\\|\\widehat{\\beta}_i-\\beta_{{0}{i}}\\|_{\\ell_2}$ Relative to that of Weighted Lasso (= 1)"
 
 plot_rel_stat_p_by_design <- function(stat, met_plt, des_plt) {
   where_des_plt <- which_designs(des_plt)
