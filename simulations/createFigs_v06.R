@@ -9,7 +9,7 @@ lapply(libplt, require, character.only = TRUE)
 # devtools::install_github("stefano-meschiari/latex2exp") # to get ell in TeX
 
 # Load workspace
-load("simulations_workspace_240_MC_100_to_500_n_4_to_16_p_with_num_upd.RData")
+load("simulations_workspace_1000_MC_200_to_1000_n_16_to_128_p_with_num_upd.RData")
 # load("simulations_workspace_1000_MC_200_to_1000_n_16_to_128_p_3_h_dot9_rho_with_num_upd_LINUX.RData")
 # load("simulations_workspace_100_MC_100_to_500_n_4_to_64_p_3_h_dot9_rho_with_num_upd.RData")
 # load("simulations_workspace_50_MC_100_to_500_n_4_to_64_p_3_h_dot9_rho_with_num_upd.Rdata")
@@ -50,7 +50,7 @@ des_lab <- function(string) {
       "Correlated" = TeX("$D$: Diag, Corr Normal"),
       "HeavyTailed" = TeX("$E$: Diag, Corr Student"),
       "Heteroskedastic" = TeX("$F$: Diag, Hetero Normal"),
-      "NearUnity" = TeX("$G$: Near Unity, IID Normal$")
+      "NearUnity" = TeX("$G$: Near Unity, IID Normal")
     )
   return(des_list[string])
 }
@@ -173,10 +173,10 @@ plot_stat_p_by_design <- function(stat, met_plt, des_plt) {
     ggh4x::facet_grid2(design ~ p, labeller = label_parsed, scales = "free_y") +
     # facetted_pos_scales(
     #       y = list(
-    #         design == "BlockDiag" ~
+    #         design == des_lab("BlockDiag")[[1]] ~
     #           scale_y_continuous(limits = c(NA, 1.5),
-    #                             breaks = scales::breaks_extended(n = 5)),
-    #         design != "BlockDiag" ~
+    #                              breaks = scales::breaks_extended(n = 5)),
+    #         design != des_lab("BlockDiag")[[1]] ~
     #           scale_y_continuous(breaks = scales::breaks_extended(n = 5))
     #       )
     #     ) +
@@ -248,15 +248,15 @@ plot_rel_stat_p_by_design <- function(stat, met_plt, des_plt) {
     scale_shape(solid = FALSE) +
     geom_hline(yintercept = 1, linetype = "dotted", color = "black") +
     ggh4x::facet_grid2(design ~ p, labeller = label_parsed, scales = "free_y") +
-    # facetted_pos_scales(
-    #       y = list(
-    #         design == "BlockDiag" ~
-    #           scale_y_continuous(limits = c(NA, 1.5),
-    #                             breaks = scales::breaks_extended(n = 5)),
-    #         design != "BlockDiag" ~
-    #           scale_y_continuous(breaks = scales::breaks_extended(n = 5))
-    #       )
-    #     ) +
+    facetted_pos_scales(
+          y = list(
+            design == "BlockDiag" ~
+              scale_y_continuous(limits = c(NA, 1.5),
+                                breaks = scales::breaks_extended(n = 5)),
+            design != "BlockDiag" ~
+              scale_y_continuous(breaks = scales::breaks_extended(n = 5))
+          )
+        ) +
     labs(
       x = TeX(r"($n$)"),
       y = TeX(paste0("Monte Carlo ", stat_string(stat), t_str_rel_stat))
@@ -286,8 +286,8 @@ plot_rel_stat_p_by_design <- function(stat, met_plt, des_plt) {
 # 1. Comparing Lasso, Sqrt-Lasso, Post-Lasso and BIC-Lasso
 # met_plt <- c("Lasso", "PostLasso", "SqrtLasso", "PostSqrtLasso", "BICLasso", "PostBICLasso")
 # des_plt <- c("Diagonal", "Correlated")
-met_plt <- c("Lasso", "PostLasso", "SqrtLasso", "BICLasso",
-             "PostSqrtLasso", "PostBICLasso")
+met_plt <- c("Lasso", "PostLasso", "SqrtLasso")#, "BICLasso")
+            #  "PostSqrtLasso", "PostBICLasso")
 # met_plt <- c("Lasso", "PostLasso", "SqrtLasso")#, "PostBICLasso")
 # des_plt <- c(#"Diagonal", 
 #              "Heteroskedastic_y", "Heteroskedastic_eta")
