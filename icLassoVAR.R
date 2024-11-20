@@ -97,6 +97,7 @@ ic_lasso_var <- function(data, q = 1, criteria = c("aic", "bic", "hqic"),
     # Back out intercepts (based on refitted coefficients) if requested
     if (intercept) {
       intrs_post <- matrix(NA, nrow = p, ncol = num_crit)
+      colnames(intrs_post) <- criteria
       for (crit in criteria) {
         intrs_post[, crit] <- ybar - thats_post[, , crit] %*% xbar
       }
