@@ -283,22 +283,57 @@ plot_rel_stat_p_by_design <- function(stat, met_plt, des_plt) {
   return(plt)
 }
 
-# 1. Comparing Lasso, Sqrt-Lasso, Post-Lasso and BIC-Lasso
-# met_plt <- c("Lasso", "PostLasso", "SqrtLasso", "PostSqrtLasso", "BICLasso", "PostBICLasso")
-# des_plt <- c("Diagonal", "Correlated")
-met_plt <- c("Lasso", "PostLasso", "SqrtLasso")#, "BICLasso")
-            #  "PostSqrtLasso", "PostBICLasso")
-# met_plt <- c("Lasso", "PostLasso", "SqrtLasso")#, "PostBICLasso")
-# des_plt <- c(#"Diagonal", 
-#              "Heteroskedastic_y", "Heteroskedastic_eta")
+plot_stat_numupd_p_by_design <- function(stat, des_plt) {
+  where_des_plt <- which_designs(des_plt)
+  dimnames(num_upd)[["p"]] <- plab(dimnames(num_upd)[["p"]])
+  dimnames(num_upd)[["design"]] <-
+    des_lab(dimnames(num_upd)[["design"]])
+  dimnames(num_upd)[["method"]] <-
+    met_lab(dimnames(num_upd)[["method"]])
+  stat_num_upd <- apply(num_upd, c(2, 3, 4, 5), stat_fctn(stat))
+  stat_num_upd_plt <- stat_num_upd[, , where_des_plt, ]
+  df <- reshape::melt(stat_num_upd_plt)
+  g <- guide_legend(nrow = 1)
+  plt <- ggplot(df, aes(x = n, y = value)) +
+    geom_line(aes(linetype = method, color = method), linewidth = 0.5) +
+    geom_point(aes(shape = method, color = method), size = 2) +
+    scale_shape(solid = FALSE) +
+    facet_grid(design ~ p, labeller = label_parsed) +
+    labs(
+      x = TeX(r"($n$)"),
+      y = TeX(paste0("Monte Carlo ", stat_string(stat),
+                     " Number of Loading Updates (Maximum 15)"))
+    ) +
+    theme_bw() +
+    theme(#legend.justification = c(1, 1), legend.position = c(1, 1),
+          legend.position = "bottom",
+          # legend.key = element_rect(colour = "transparent", fill = NA),
+          legend.box.background = element_rect(colour = "black"),
+          legend.title = element_blank(),
+          legend.text = element_text(size = rel(.75)),
+          legend.margin = margin(c(0, 0, 0, 0), unit = "mm"),
+          legend.spacing = unit(0, "mm"),
+          legend.spacing.x = unit(0, "mm"),
+          legend.spacing.y = unit(0, "mm"),
+          panel.spacing.y = unit(3, "mm"),
+          plot.title = element_text(size = rel(0.5)),
+          plot.caption = element_text(hjust = 0, size = rel(0.5))
+    ) +
+    scale_y_continuous(breaks = c(1, 5, 10, 15), limits = c(1, 15)) +
+    scale_colour_manual(values = cb_palette) +
+    scale_shape_manual(values = shape_order) +
+    scale_linetype_manual(values = linetype_order) +
+    guides(color = g, shape = g, linetype = g)
+}
+
+# 1. Comparing Lasso, Post-Lasso and Sqrt-Lasso
+met_plt <- c("Lasso", "PostLasso", "SqrtLasso")
 des_plt <- c("Diagonal", "NearBand", "BlockDiag",
              "Correlated", "HeavyTailed",
              "Heteroskedastic", "NearUnity")
-# met_plt <- c("Lasso", "PostLasso", "SqrtLasso", "PostSqrtLasso", "BICLasso")
-# des_plt <- c("Diagonal", "BlockDiag", "NearBand",
-#              "Correlated", "Heteroskedastic", "HeavyTailed")
+stats_plt <- c("mean", "median", "q90", "q95") # statistics to plot
 
-stats_plt <- c("mean") # statistics to plot
+# ... in terms of absolute max ell2 errors
 for (thisstat in seq_along(stats_plt)) {
   which_stat <- stats_plt[thisstat]
   plt <- plot_stat_p_by_design(stats_plt[thisstat],
@@ -311,7 +346,7 @@ for (thisstat in seq_along(stats_plt)) {
          width = 8, height = 12)
 }
 
-stats_plt <- c("mean") # statistics to plot
+# ... in terms of relative max ell2 errors
 for (thisstat in seq_along(stats_plt)) {
   which_stat <- stats_plt[thisstat]
   plt <- plot_rel_stat_p_by_design(stats_plt[thisstat],
@@ -319,6 +354,17 @@ for (thisstat in seq_along(stats_plt)) {
                                    des_plt = des_plt)
   file_name <- paste("rel_",
                      stats_plt[thisstat], "_max_ell2_errors_p_by_design_",
+                     nummc, "_MC_", min(nvec), "_to_", max(nvec),
+                     "_n_", min(pvec), "_to_", max(pvec), "_p", sep = "")
+  ggsave(plt, filename = paste0("img/", file_name, ".png"),
+         width = 8, height = 12)
+}
+
+# ... and in terms of number of loading updates (<=15; Lasso & Post-Lasso only)
+for (thisstat in seq_along(stats_plt)) {
+  which_stat <- stats_plt[thisstat]
+  plt <- plot_stat_numupd_p_by_design(stats_plt[thisstat], des_plt = des_plt)
+  file_name <- paste(stats_plt[thisstat], "_num_upd_p_by_design_",
                      nummc, "_MC_", min(nvec), "_to_", max(nvec),
                      "_n_", min(pvec), "_to_", max(pvec), "_p", sep = "")
   ggsave(plt, filename = paste0("img/", file_name, ".png"),
