@@ -76,22 +76,22 @@ lasso_var <- function(data, q = 1, post = TRUE, intercept = TRUE,
   return(fit)
 }
 
-source("helper_functions.R")
-lasso_var <- function(data, q = 1, post = TRUE, intercept = TRUE,
-                      c = 1.1, gamma = NULL, k = 15,
-                      tol_ups = 1e-3, warn = TRUE, full_path = FALSE,
-                      tol_glmnet = 1e-4) {
-  # Unpack data and construct predictors and response
-  xy_data <- unpack(data = data, q = q)
-  x <- xy_data$x
-  y <- xy_data$y
-  # Call upon mult_lasso_bcch
-  fit <- mult_lasso_bcch(x = x, y = y, post = post, intercept = intercept,
-                         c = c, gamma = gamma, k = k,
-                         tol_ups = tol_ups, warn = warn, full_path = full_path,
-                         tol_glmnet = tol_glmnet)
-  return(fit)
-}
+# source("helper_functions.R")
+# lasso_var <- function(data, q = 1, post = TRUE, intercept = TRUE,
+#                       c = 1.1, gamma = NULL, k = 15,
+#                       tol_ups = 1e-3, warn = TRUE, full_path = FALSE,
+#                       tol_glmnet = 1e-4) {
+#   # Unpack data and construct predictors and response
+#   xy_data <- unpack(data = data, q = q)
+#   x <- xy_data$x
+#   y <- xy_data$y
+#   # Call upon mult_lasso_bcch
+#   fit <- mult_lasso_bcch(x = x, y = y, post = post, intercept = intercept,
+#                          c = c, gamma = gamma, k = k,
+#                          tol_ups = tol_ups, warn = warn, full_path = full_path,
+#                          tol_glmnet = tol_glmnet)
+#   return(fit)
+# }
 
 
 # # OLD VERSION BELOW
