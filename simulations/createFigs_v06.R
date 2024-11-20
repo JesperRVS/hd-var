@@ -55,47 +55,6 @@ des_lab <- function(string) {
   return(des_list[string])
 }
 
-# des_lab <- function(string) {
-#   des_list <- c("Diagonal" = "A: Diagonal, IID Gaussian",
-#                 "NearBand" = "B: Near-band, IID Gaussian",
-#                 "BlockDiag" = "C: Blocks, IID Gaussian",
-#                 "Correlated" = "D: Diag., Corr. Gaussian",
-#                 "HeavyTailed" = "E: Diag., Corr. Student",
-#                 "Heteroskedastic" = "F: Diag., Hetero. Gaussian",
-#                 "NearUnity" = "G: Near ident., IID Gaussian$")
-#   return(des_list[string])
-# }
-
-# met_lab <- function(string) {
-#   met_list <- list("Lasso" = "Lasso",
-#                    "AICLasso" = "AIC Lasso",
-#                    "BICLasso" = "BIC Lasso",
-#                    "HQICLasso" = "HQIC Lasso",
-#                    "SqrtLasso" = "Square-Root Lasso",
-#                    "PostLasso" = "Post Lasso",
-#                    "PostAICLasso" = "Post AIC Lasso",
-#                    "PostBICLasso" = "Post BIC Lasso",
-#                    "PostHQICLasso" = "Post HQIC Lasso",
-#                    "PostSqrtLasso" = "Post Square-Root Lasso")
-#   return(met_list[string])
-# }
-
-# # Rewrite met_lab using a switch instead of a list
-# met_lab <- function(string) {
-#   switch(string,
-#          "Lasso" = "Lasso",
-#          "AICLasso" = "AIC Lasso",
-#          "BICLasso" = "BIC Lasso",
-#          "HQICLasso" = "HQIC Lasso",
-#          "SqrtLasso" = "Square-Root Lasso",
-#          "PostLasso" = "Post Lasso",
-#          "PostAICLasso" = "Post AIC Lasso",
-#          "PostBICLasso" = "Post BIC Lasso",
-#          "PostHQICLasso" = "Post HQIC Lasso",
-#          "PostSqrtLasso" = "Post Square-Root Lasso",
-#          stop("Invalid method"))
-# }
-# Rewrite met_lab to allow for vector of strings
 met_lab <- function(string) {
   met_list <- c("Lasso" = "Weighted Lasso",
                 "AICLasso" = "AIC-Lasso",
@@ -110,8 +69,6 @@ met_lab <- function(string) {
   return(met_list[string])
 }
 
-# Specify statistics to plot and methods to include
-
 # Function providing string for statistic (included in y-label)
 stat_string <- function(stat) {
   switch(stat,
@@ -125,7 +82,7 @@ stat_string <- function(stat) {
          stop("Invalid statistic"))
 }
 
-# Function providing function for statistic
+# Function providing (function for) statistic
 stat_fctn <- function(stat) {
   switch(stat,
          "max" = max,
