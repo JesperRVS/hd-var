@@ -126,17 +126,7 @@ plot_stat_p_by_design <- function(stat, met_plt, des_plt) {
     geom_line(aes(linetype = method, color = method), linewidth = 0.5) +
     geom_point(aes(shape = method, color = method), size = 2) +
     scale_shape(solid = FALSE) +
-    # geom_hline(yintercept = 1, linetype = "dotted", color = "black") +
     ggh4x::facet_grid2(design ~ p, labeller = label_parsed, scales = "free_y") +
-    # facetted_pos_scales(
-    #       y = list(
-    #         design == des_lab("BlockDiag")[[1]] ~
-    #           scale_y_continuous(limits = c(NA, 1.5),
-    #                              breaks = scales::breaks_extended(n = 5)),
-    #         design != des_lab("BlockDiag")[[1]] ~
-    #           scale_y_continuous(breaks = scales::breaks_extended(n = 5))
-    #       )
-    #     ) +
     labs(
       x = TeX(r"($n$)"),
       y = TeX(paste0("Monte Carlo ", stat_string(stat), t_str_stat))
@@ -186,18 +176,6 @@ plot_rel_stat_p_by_design <- function(stat, met_plt, des_plt) {
     met_lab(dimnames(rel_stat_max_ell2)[["method"]])
   rel_stat_max_ell2_plt <- rel_stat_max_ell2[, , where_des_plt, where_met_plt]
   rel_stat_max_ell2_plt <- rel_stat_max_ell2_plt[, , , -1] #  drop Lasso (all 1)
-  # stat_max_ell2_plt <- stat_max_ell2[, , where_des_plt, where_met_plt]
-  # rel_stat_max_ell2_plt <- array(NA, dim(stat_max_ell2_plt))
-  # dimnames(rel_stat_max_ell2_plt) <- dimnames(stat_max_ell2_plt)
-  # for (i in seq_along(where_des_plt)) {
-  #   for (j in seq_along(where_met_plt)) {
-  #     rel_stat_max_ell2_plt[, , i, j] <- stat_max_ell2_plt[, , i, j] /
-  #                                        stat_max_ell2_plt[, , i, 1] # <- Lasso
-  #   }
-  # }
-  # rel_stat_max_ell2_plt <- rel_stat_max_ell2_plt[, , , -1] #  drop Lasso (all 1)
-  # levels(rel_stat_max_ell2_plt$method) <-
-  #   met_lab(levels(rel_stat_max_ell2_plt$method))
   df <- reshape::melt(rel_stat_max_ell2_plt)
   g <- guide_legend()
   plt <- ggplot(df, aes(x = n, y = value)) +
@@ -206,15 +184,6 @@ plot_rel_stat_p_by_design <- function(stat, met_plt, des_plt) {
     scale_shape(solid = FALSE) +
     geom_hline(yintercept = 1, linetype = "dotted", color = "black") +
     ggh4x::facet_grid2(design ~ p, labeller = label_parsed, scales = "free_y") +
-    # facetted_pos_scales(
-    #       y = list(
-    #         design == "BlockDiag" ~
-    #           scale_y_continuous(limits = c(NA, 1.5),
-    #                             breaks = scales::breaks_extended(n = 5)),
-    #         design != "BlockDiag" ~
-    #           scale_y_continuous(breaks = scales::breaks_extended(n = 5))
-    #       )
-    #     ) +
     labs(
       x = TeX(r"($n$)"),
       y = TeX(paste0("Monte Carlo ", stat_string(stat), t_str_rel_stat))
@@ -234,6 +203,7 @@ plot_rel_stat_p_by_design <- function(stat, met_plt, des_plt) {
           plot.title = element_text(size = rel(0.5)),
           plot.caption = element_text(hjust = 0, size = rel(0.5))
     ) +
+    scale_x_continuous(breaks = seq(200, 1000, 200), limits = c(100, 1000)) +
     scale_colour_manual(values = cb_palette[-1]) +
     scale_shape_manual(values = shape_order[-1]) +
     scale_linetype_manual(values = linetype_order[-1]) +
@@ -277,6 +247,7 @@ plot_stat_numupd_p_by_design <- function(stat, des_plt) {
           plot.title = element_text(size = rel(0.5)),
           plot.caption = element_text(hjust = 0, size = rel(0.5))
     ) +
+    scale_x_continuous(breaks = seq(200, 1000, 200), limits = c(100, 1000)) +
     scale_y_continuous(breaks = c(1, 5, 10, 15), limits = c(1, 15)) +
     scale_colour_manual(values = cb_palette) +
     scale_shape_manual(values = shape_order) +
@@ -318,7 +289,6 @@ for (thisstat in seq_along(stats_plt)) {
          width = 8, height = 12)
 }
 
-# ... and in terms of number of loading updates (<=15; Lasso & Post-Lasso only)
 for (thisstat in seq_along(stats_plt)) {
   which_stat <- stats_plt[thisstat]
   plt <- plot_stat_numupd_p_by_design(stats_plt[thisstat], des_plt = des_plt)
