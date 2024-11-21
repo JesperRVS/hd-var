@@ -19,11 +19,11 @@ data <- as.matrix(data) # convert from dataframe to matrix
 n_all <- nrow(data)
 p <- ncol(data)
 
-qvec <- 1:4 #12                  # lags
+qvec <- 1:12                  # lags
 numlag <- length(qvec)        # number of lags
 qmax <- max(qvec)             # maximum lag
 
-numfore <- 10 # 120              # number of forecast horizons
+numfore <- 120                # number of forecast horizons
 
 n <- n_all - numfore - qmax   # number of observations used for estimation
 
