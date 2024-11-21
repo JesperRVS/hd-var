@@ -9,7 +9,7 @@ lapply(libplt, require, character.only = TRUE)
 # devtools::install_github("stefano-meschiari/latex2exp") # to get ell in TeX
 
 # Load workspace
-load("simulations_workspace_1000_MC_200_to_1000_n_16_to_128_p_with_num_upd.RData")
+load("simulations_workspace_1000_MC_100_to_1000_n_16_to_128_p_with_num_upd.RData")
 # load("simulations_workspace_1000_MC_200_to_1000_n_16_to_128_p_3_h_dot9_rho_with_num_upd_LINUX.RData")
 # load("simulations_workspace_100_MC_100_to_500_n_4_to_64_p_3_h_dot9_rho_with_num_upd.RData")
 # load("simulations_workspace_50_MC_100_to_500_n_4_to_64_p_3_h_dot9_rho_with_num_upd.Rdata")
@@ -156,6 +156,7 @@ plot_stat_p_by_design <- function(stat, met_plt, des_plt) {
           plot.title = element_text(size = rel(0.5)),
           plot.caption = element_text(hjust = 0, size = rel(0.5))
     ) +
+    scale_x_continuous(breaks = seq(200, 1000, 200), limits = c(100, 1000)) +
     scale_colour_manual(values = cb_palette) +
     scale_shape_manual(values = shape_order) +
     scale_linetype_manual(values = linetype_order) +
@@ -205,15 +206,15 @@ plot_rel_stat_p_by_design <- function(stat, met_plt, des_plt) {
     scale_shape(solid = FALSE) +
     geom_hline(yintercept = 1, linetype = "dotted", color = "black") +
     ggh4x::facet_grid2(design ~ p, labeller = label_parsed, scales = "free_y") +
-    facetted_pos_scales(
-          y = list(
-            design == "BlockDiag" ~
-              scale_y_continuous(limits = c(NA, 1.5),
-                                breaks = scales::breaks_extended(n = 5)),
-            design != "BlockDiag" ~
-              scale_y_continuous(breaks = scales::breaks_extended(n = 5))
-          )
-        ) +
+    # facetted_pos_scales(
+    #       y = list(
+    #         design == "BlockDiag" ~
+    #           scale_y_continuous(limits = c(NA, 1.5),
+    #                             breaks = scales::breaks_extended(n = 5)),
+    #         design != "BlockDiag" ~
+    #           scale_y_continuous(breaks = scales::breaks_extended(n = 5))
+    #       )
+    #     ) +
     labs(
       x = TeX(r"($n$)"),
       y = TeX(paste0("Monte Carlo ", stat_string(stat), t_str_rel_stat))
