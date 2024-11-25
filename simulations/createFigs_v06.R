@@ -107,7 +107,7 @@ shape_order <- c(0, 1, 2, 5, 4, 3)
 linetype_order <- c("solid", "dashed", "dotdash",
                     "dotted", "longdash", "twodash")
 
-# Function to plot error statistics as method (cols) by design (rows)
+# Function to plot error statistics
 t_str_stat <- " of $\\max_{i\\in[p]}\\|\\widehat{\\beta}_i-\\beta_{{0}{i}}\\|_{\\ell_2}$"
 
 plot_stat_p_by_design <- function(stat, met_plt, des_plt) {
