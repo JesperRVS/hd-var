@@ -15,20 +15,20 @@ testrun <- FALSE # whether to run a test simulation
 if (testrun) {
   nvec <- seq(from = 100, to = 500, by = 100)
   pvec <- c(4, 8, 16)
-  designs <- c("Diagonal", "NearBand")
+  designs <- c("Diagonal")#, "NearBand")
   methods <- c("Lasso", "PostLasso", "SqrtLasso", "PostSqrtLasso")
   nburn <- 100
-  nummc <- 250 # no. MC repetitions
+  nummc <- 80 # no. MC repetitions
 } else {
   nvec <- seq(from = 200, to = 1000, by = 200)
   pvec <- c(16, 32, 64, 128)
-  designs <- c("Diagonal", "NearBand", "BlockDiag",
-               "Correlated", "HeavyTailed", "Heteroskedastic", "NearUnity")
+  designs <- c("Diagonal")#, "NearBand", "BlockDiag",
+               #"Correlated", "HeavyTailed", "Heteroskedastic", "NearUnity")
   methods <- c("Lasso", "PostLasso", "SqrtLasso", "PostSqrtLasso")
   nburn <- 1000
-  nummc <- 80 # no. MC repetitions TODO
+  nummc <- 1000 # no. MC repetitions TODO
 }
-cvec <- c(1, 1.05, 1.1)
+cvec <- c(1, 1.05, 1.1, 2, 10)
 numn <- length(nvec)
 nump <- length(pvec)
 numdes <- length(designs)
@@ -178,7 +178,7 @@ if (Sys.info()[["sysname"]] == "Linux") {
   file_name <- paste("markup_dependence_workspace_", nummc, "_MC_",
                      min(nvec), "_to_", max(nvec),
                      "_n_", min(pvec), "_to_", max(pvec), "_p",
-                     sep = "")
+                     "_diagonal_only", sep = "")
   save.image(file = paste0("simulations/", file_name, ".RData"))
   q("no")
 }

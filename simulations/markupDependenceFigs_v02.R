@@ -9,7 +9,7 @@ lapply(libplt, require, character.only = TRUE)
 # devtools::install_github("stefano-meschiari/latex2exp") # to get ell in TeX
 
 # Load workspace
-load("markup_dependence_workspace_80_MC_200_to_1000_n_16_to_128_p.RData")
+load("markup_dependence_workspace_80_MC_200_to_1000_n_16_to_128_p_diagonal_only.RData")
 
 ## == HELPER FUNCTIONS ##
 # Function providing locations of methods to plot
@@ -39,12 +39,12 @@ clab <- function(string) {
 }
 
 plab <- function(string) {
-  TeX(sprintf("$p = %s$", string)) # note: labeller expects a string
+  sprintf("p = %s", string) # note: labeller expects a string
 }
 
 des_lab <- function(string) {
   des_list <-
-    c("Diagonal" = TeX("$A$: Diagonal, IID Normal"),
+    c("Diagonal" = TeX("A$: Diagonal, IID Normal"),
       "NearBand" = TeX("$B$: Near Band, IID Normal"),
       "BlockDiag" = TeX("$C$: Block Diag, IID Normal"),
       "Correlated" = TeX("$D$: Diag, Corr Normal"),
@@ -56,10 +56,11 @@ des_lab <- function(string) {
 }
 
 met_lab <- function(string) {
-  met_list <- c("Lasso" = "Weighted Lasso",
-                "SqrtLasso" = "Sqrt-Lasso",
-                "PostLasso" = "Post-Lasso",
-                "PostSqrtLasso" = "Post-Sqrt-Lasso")
+  met_list <- c("Lasso" = TeX("Weighted Lasso"),
+                "SqrtLasso" = TeX("Sqrt-Lasso"),
+                "PostLasso" = TeX("Post-Lasso"),
+                "PostSqrtLasso" = TeX("Post-Sqrt-Lasso")
+              )
   return(met_list[string])
 }
 
@@ -102,31 +103,33 @@ linetype_order <- c("solid", "dashed", "dotdash",
                     "dotted", "longdash", "twodash")
 
 # Function to plot error statistics
-t_str_stat <- " of $\\max_{i\\in[p]}\\|\\widehat{\\beta}_i-\\beta_{{0}{i}}\\|_{\\ell_2}$ for "
 
-plot_stat_p_by_design <- function(stat, method, des_plt) {
-  where_des_plt <- which_designs(des_plt)
-  which_met_plt <- which_methods(method)
-  dimnames(max_ell2_errors)[["p"]] <- plab(dimnames(max_ell2_errors)[["p"]])
-  dimnames(max_ell2_errors)[["design"]] <-
-    des_lab(dimnames(max_ell2_errors)[["design"]])
-  dimnames(max_ell2_errors)[["method"]] <-
-    met_lab(dimnames(max_ell2_errors)[["method"]])
+t_str_stat <- " of $\\max_{i\\in[p]}\\|\\widehat{\\beta}_i-\\beta_{{0}{i}}\\|_{\\ell_2}$"
+
+plot_stat_p_by_method <- function(stat, met_plt, design) {
+  where_met_plt <- which_methods(met_plt)
+  where_des <- which_designs(design)
+  # dimnames(max_ell2_errors)[["p"]] <- plab(dimnames(max_ell2_errors)[["p"]])
+  # dimnames(max_ell2_errors)[["design"]] <-
+    # des_lab(dimnames(max_ell2_errors)[["design"]])
+  # dimnames(max_ell2_errors)[["method"]] <-
+    # met_lab(dimnames(max_ell2_errors)[["method"]])
   dimnames(max_ell2_errors)[["c"]] <- clab(dimnames(max_ell2_errors)[["c"]])
   stat_max_ell2 <- apply(max_ell2_errors, c("n", "p", "design", "method", "c"),
                          stat_fctn(stat))
-  stat_max_ell2_plt <- stat_max_ell2[, , where_des_plt, which_met_plt, ]
+  stat_max_ell2_plt <- stat_max_ell2[, , where_des, where_met_plt, ]
   df <- reshape::melt(stat_max_ell2_plt)
   g <- guide_legend(nrow = 1)
   plt <- ggplot(df, aes(x = n, y = value)) +
     geom_line(aes(linetype = factor(c), color = factor(c)), linewidth = 0.5) +
     geom_point(aes(shape = factor(c), color = factor(c)), size = 2) +
     scale_shape(solid = FALSE) +
-    ggh4x::facet_grid2(design ~ p, labeller = label_parsed, scales = "free_y") +
+    ggh4x::facet_grid2(method ~ p,
+                       labeller = labeller(method = met_lab, p = plab),
+                       scales = "free_y") +
     labs(
       x = TeX(r"($n$)"),
-      y = TeX(paste0("Monte Carlo ", stat_string(stat), t_str_stat,
-                     met_lab(method))),
+      y = TeX(paste0("Monte Carlo ", stat_string(stat), t_str_stat))
     ) +
     theme_bw() +
     theme(legend.position = "bottom",
@@ -147,28 +150,23 @@ plot_stat_p_by_design <- function(stat, method, des_plt) {
     scale_shape_manual(values = shape_order) +
     scale_linetype_manual(values = linetype_order) +
     guides(color = g, shape = g, linetype = g)
-  return(plt)
 }
 
-# Plotting statistics of maximum ell_2 errors as function of the score markup 
-# (c) for Lasso, Post-Lasso, Sqrt-Lasso and Post-Sqrt-Lasso and saving the
-# plots as png files
-met_plt <- c("Lasso", "PostLasso", "SqrtLasso", "PostSqrtLasso")
+# Plotting statistics of maximum ell_2 errors as function of the score markup
+met_plt <- c("Lasso", "PostLasso", "SqrtLasso")
 stats_plt <- c("mean")
-des_plt <- designs
-# des_plt <- c("Diagonal", "NearBand")
-
-for (thismet in seq_along(met_plt)) {
-  method <- met_plt[thismet]
+des_plt <- c("Diagonal")
+for (thisdes in seq_along(des_plt)) {
+  design <- des_plt[thisdes]
   for (thisstat in seq_along(stats_plt)) {
-    plt <- plot_stat_p_by_design(stats_plt[thisstat],
-                                 method = method,
-                                 des_plt = des_plt)
+    plt <- plot_stat_p_by_method(stats_plt[thisstat],
+                                 met_plt = met_plt,
+                                 design = design)
     file_name <- paste0("markup_dependence_", stats_plt[thisstat], "_error_",
-                        method, "_", nummc, "_MC_",
+                        design, "_design_", nummc, "_MC_",
                         min(nvec), "_to_", max(nvec), "_n_",
                         min(pvec), "_to_", max(pvec), "_p")
     ggsave(plt, filename = paste0("img/", file_name, ".png"),
-           width = 8, height = 12)
+           width = 8, height = 6)
   }
 }
