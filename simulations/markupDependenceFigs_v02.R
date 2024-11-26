@@ -9,7 +9,7 @@ lapply(libplt, require, character.only = TRUE)
 # devtools::install_github("stefano-meschiari/latex2exp") # to get ell in TeX
 
 # Load workspace
-load("markup_dependence_workspace_80_MC_200_to_1000_n_16_to_128_p_diagonal_only.RData")
+load("markup_dependence_workspace_1000_MC_200_to_1000_n_16_to_128_p_diagonal_only.RData")
 
 ## == HELPER FUNCTIONS ##
 # Function providing locations of methods to plot
