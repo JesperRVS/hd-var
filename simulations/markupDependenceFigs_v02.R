@@ -125,8 +125,7 @@ plot_stat_p_by_method <- function(stat, met_plt, design) {
     geom_point(aes(shape = factor(c), color = factor(c)), size = 2) +
     scale_shape(solid = FALSE) +
     ggh4x::facet_grid2(method ~ p,
-                       labeller = labeller(method = met_lab, p = plab),
-                       scales = "free_y") +
+                       labeller = labeller(method = met_lab, p = plab)) +
     labs(
       x = TeX(r"($n$)"),
       y = TeX(paste0("Monte Carlo ", stat_string(stat), t_str_stat))
@@ -142,7 +141,8 @@ plot_stat_p_by_method <- function(stat, met_plt, design) {
           legend.spacing.y = unit(0, "mm"),
           panel.spacing.y = unit(3, "mm"),
           plot.title = element_text(size = rel(0.5)),
-          plot.caption = element_text(hjust = 0, size = rel(0.5))
+          plot.caption = element_text(hjust = 0, size = rel(0.5)),
+          axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1),
     ) +
     scale_x_continuous(breaks = seq(200, max(nvec), 200),
                        limits = c(200, max(nvec))) +
