@@ -40,8 +40,8 @@ stat_string <- function(stat) {
          "max" = "Maximum",
          "mean" = "Average",
          "median" = "Median",
-         "q90" = "90th Quantile",
-         "q95" = "95th Quantile",
+         "q90" = "90th Percentile",
+         "q95" = "95th Percentile",
          "var" = "Variance",
          "sd" = "Standard Deviation",
          stop("Invalid statistic"))
