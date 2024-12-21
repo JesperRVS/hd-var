@@ -200,7 +200,7 @@ To have access to ```lassoVAR.R``` and ```sqrtLassoVAR.R```, these scripts must 
 Use ```setwd("..")``` to back up. When executed in a Linux environment, the script will
 automatically save the workspaces in the simulations folder. If a different environment
 is used, the workspace must be saved manually (via ```same.image(...)```). 
-The figures included in the paper arise from calling the scripts ```createFigs_v06.R```
+The figures included in the paper arise from calling the scripts ```createFigs_v07.R```
 and ```markupDependenceFigs_v02.R``` from their folder, which load the relevant workspace from 
 the simulations folder and produce figures in the ```simulations/img``` folder.
 
