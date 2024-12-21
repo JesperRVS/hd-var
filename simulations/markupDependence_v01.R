@@ -26,7 +26,7 @@ if (testrun) {
                #"Correlated", "HeavyTailed", "Heteroskedastic", "NearUnity")
   methods <- c("Lasso", "PostLasso", "SqrtLasso", "PostSqrtLasso")
   nburn <- 1000
-  nummc <- 1000 # no. MC repetitions TODO
+  nummc <- 1000 # no. MC repetitions
 }
 cvec <- c(1, 1.05, 1.1, 2, 10)
 numn <- length(nvec)

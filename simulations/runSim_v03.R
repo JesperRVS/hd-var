@@ -24,8 +24,7 @@ if (testrun) {
   nburn <- 100
   nummc <- 240 # no. MC repetitions
 } else {
-  # nvec <- seq(from = 200, to = 1000, by = 200)
-  nvec <- seq(from = 100, to = 1000, by = 100) # TODO
+  nvec <- seq(from = 100, to = 1000, by = 100)
   pvec <- c(16, 32, 64, 128)
   designs <- c("Diagonal", "NearBand", "BlockDiag",
                "Correlated", "HeavyTailed", "Heteroskedastic", "NearUnity")
@@ -33,7 +32,7 @@ if (testrun) {
                "BICLasso", "PostBICLasso",
                "SqrtLasso", "PostSqrtLasso")
   nburn <- 1000
-  nummc <- 1000 # no. MC repetitions TODO
+  nummc <- 1000 # no. MC repetitions
 }
 numn <- length(nvec)
 nump <- length(pvec)
