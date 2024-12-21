@@ -1,0 +1,18 @@
+**To reproduce the simulations:**
+Execute ```runSim_v03.R``` to run the main text simulations and
+```markupDependence_v01.R``` for the mark-up dependence simulations, specifically.
+To have access to ```lassoVAR.R``` and ```sqrtLassoVAR.R```, these scripts must be executed from the parent folder.
+Use ```setwd("..")``` to back up. When executed in a Linux environment, the script will
+automatically save the workspaces in the simulations folder. If a different environment
+is used, the workspace must be saved manually (via ```same.image(...)```). 
+The figures included in the paper arise from calling the scripts ```createFigs_v06.R```
+and ```markupDependenceFigs_v02.R``` from their folder, which load the relevant workspace from 
+the simulations folder and produce figures in the ```simulations/img``` folder.
+
+**To reproduce the empirical illustration:**
+Execute ```FRED-MD_forecasting_v02.R ``` 
+(from the parent folder via ```setwd("../..")```) to conduct the forecasting exercise.
+The script loads the pre-processed data from the ```application/FRED/data``` folder
+and automatically saves the workspace (if in Linux).
+Run ```FRED-MD_figures.R``` to produce the figures in the empirical illustration
+in the ```application/FRED/img``` folder.
