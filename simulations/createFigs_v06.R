@@ -6,15 +6,10 @@ invisible(gc()) #free up memory
 libplt <- c("devtools", "ggh4x", "ggplot2", "latex2exp", "reshape", "scales")
 lapply(libplt, require, character.only = TRUE)
 
-# devtools::install_github("stefano-meschiari/latex2exp") # to get ell in TeX
+# devtools::install_github("stefano-meschiari/latex2exp") # for \ell in TeX
 
 # Load workspace
 load("simulations_workspace_1000_MC_100_to_1000_n_16_to_128_p_with_num_upd.RData")
-# load("simulations_workspace_1000_MC_200_to_1000_n_16_to_128_p_3_h_dot9_rho_with_num_upd_LINUX.RData")
-# load("simulations_workspace_100_MC_100_to_500_n_4_to_64_p_3_h_dot9_rho_with_num_upd.RData")
-# load("simulations_workspace_50_MC_100_to_500_n_4_to_64_p_3_h_dot9_rho_with_num_upd.Rdata")
-# load("simulations_workspace_80_MC_100_to_500_n_16_to_128_p_3_h_LINUX_with_num_upd.RData")
-# load("simulations_workspace_250_MC_200_to_1000_n_16_to_128_p_3_h_LINUX_with_num_upd.RData")
 
 ## == HELPER FUNCTIONS ##
 # Function providing locations of methods to plot
@@ -260,7 +255,7 @@ met_plt <- c("Lasso", "PostLasso", "SqrtLasso")
 des_plt <- c("Diagonal", "NearBand", "BlockDiag",
              "Correlated", "HeavyTailed",
              "Heteroskedastic", "NearUnity")
-stats_plt <- c("mean", "median", "q90", "q95") # statistics to plot
+stats_plt <- c("mean")#, "median", "q90", "q95") # statistics to plot
 
 # ... in terms of absolute max ell2 errors
 for (thisstat in seq_along(stats_plt)) {

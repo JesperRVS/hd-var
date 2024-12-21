@@ -103,17 +103,11 @@ linetype_order <- c("solid", "dashed", "dotdash",
                     "dotted", "longdash", "twodash")
 
 # Function to plot error statistics
-
 t_str_stat <- " of $\\max_{i\\in[p]}\\|\\widehat{\\beta}_i-\\beta_{{0}{i}}\\|_{\\ell_2}$"
 
 plot_stat_p_by_method <- function(stat, met_plt, design) {
   where_met_plt <- which_methods(met_plt)
   where_des <- which_designs(design)
-  # dimnames(max_ell2_errors)[["p"]] <- plab(dimnames(max_ell2_errors)[["p"]])
-  # dimnames(max_ell2_errors)[["design"]] <-
-    # des_lab(dimnames(max_ell2_errors)[["design"]])
-  # dimnames(max_ell2_errors)[["method"]] <-
-    # met_lab(dimnames(max_ell2_errors)[["method"]])
   dimnames(max_ell2_errors)[["c"]] <- clab(dimnames(max_ell2_errors)[["c"]])
   stat_max_ell2 <- apply(max_ell2_errors, c("n", "p", "design", "method", "c"),
                          stat_fctn(stat))
@@ -154,7 +148,7 @@ plot_stat_p_by_method <- function(stat, met_plt, design) {
 
 # Plotting statistics of maximum ell_2 errors as function of the score markup
 met_plt <- c("Lasso", "PostLasso", "SqrtLasso")
-stats_plt <- c("mean")
+stats_plt <- c("mean")#, "median", "q90", "q95") # statistics to plot
 des_plt <- c("Diagonal")
 for (thisdes in seq_along(des_plt)) {
   design <- des_plt[thisdes]
