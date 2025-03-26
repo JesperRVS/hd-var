@@ -49,7 +49,7 @@ If the data are publicly available, see the *Publicly available data* section. O
 
 ### Publicly available data
 
-- [x] Data are available online at: Michael W.~McCracken's
+- [x] Data are available online at: Michael W. McCracken's
 website (https://research.stlouisfed.org/econ/mccracken/fred-databases/). We used the May 2022 version of FRED-MD.
 
 - [x] Data are available as part of the paper’s supplementary material: We include FRED-MD_2022-05_preprocessed.csv (pre-processed data) and FRED-MD_2022-05.csv (raw data).
@@ -100,16 +100,16 @@ A data dictionary provides information that allows users to understand the meani
 
 ## Abstract
 
-The main functions are ```lassoVAR.R``` and ```sqrtLassoVAR.R```, which are designed to 
+The main scripts are ```lassoVAR.R``` and ```sqrtLassoVAR.R```, which include functions designed to 
 estimate a VAR by weighted Lasso, post-Lasso and sqrt-Lasso going equation by 
 equation. The basic inputs are a time series dataset (expecting: time as rows, series as columns) and the number of lags 
 used in the autoregression (default: one). 
-To get the weighted lasso, call ```fit <- lassoVAR(data = data, q = 1, post = FALSE)```,
+To get the weighted lasso, call ```fit <- lasso_var(data = data, q = 1, post = FALSE)```,
 with post-Lasso arising from ```post = TRUE``` (default). The call for sqrt-Lasso is
 analogous.
 The basic outputs are the estimated coefficients (a matrix) and intercepts 
 (a vector; included by default), which are extracted as ```fit$that``` and ```fit$intr```, 
-respectively. These functions rely on ```helper_functions.R```. The main and helper functions are used in the simulation study and empirical illustration in the paper.
+respectively. These scripts call upon the (helper) functions in ```helper_functions.R```. The main and helper functions are used in the simulation study and empirical illustration in the paper.
 The simulations are executed via ```runSim_v03.R```, which calls on ```simData.R``` for the
 different simulation designs.
 The empirical illustration is conducted via ```FRED-MD_forecasting_v02.R```.
@@ -191,12 +191,30 @@ omitted, with information provided in the "Location" section below.
 
 # Part 3: Reproducibility workflow
 
-## Workflow
+## Simulations
+1. **Run the main simulations**:
+   - Execute `runSim_v03.R` to run the simulations described in Section 6. (Execute from the root directory. Use ``setwd("..")`` to back up, if necessary.)
+   - Save the workspace manually if not using Linux (via `save.image(...)`).
+2. **Run the mark-up dependence simulations**:
+   - Execute `markupDependence_v01.R` (from the root) to run the Supplementary Appendix H simulations investigating mark-up dependence.
+3. **Generate figures**:
+   - Run `createFigs_v07.R` to produce Figure 6.1 and Figure H.1.
+   - Run `markupDependenceFigs_v02.R` to produce Figure H.2.
+
+## Empirical Illustration
+1. **(Optional) Pre-process the raw FRED-MD dataset (using Matlab)**:
+   - Run `FREDMD_preprocess.m`, which calls upon `prepare_missing.m`, and `remove_outliers.m` in sequence.
+2. **Conduct the forecasting exercise**:
+   - Execute `FRED-MD_forecasting_v02.R`. (Execute from the root directory. Use `setwd("../..")` to back up, if necessary.)
+   - The script will load the pre-processed data from `application/FRED/data` and save the workspace automatically (if in Linux).
+3. **Generate figures**: Run `FRED-MD_figures_v02.R` to produce both parts of Figure 7.1.
+
+<!-- ## Workflow
 
 **To reproduce the simulations:**
 Execute ```runSim_v03.R``` to run the main text simulations and
 ```markupDependence_v01.R``` for the mark-up dependence simulations, specifically.
-To have access to ```lassoVAR.R``` and ```sqrtLassoVAR.R```, these scripts must be executed from the parent folder.
+To have access to ```lassoVAR.R``` and ```sqrtLassoVAR.R```, these scripts must be executed from the root directory.
 Use ```setwd("..")``` to back up. When executed in a Linux environment, the script will
 automatically save the workspaces in the simulations folder. If a different environment
 is used, the workspace must be saved manually (via ```same.image(...)```). 
@@ -206,11 +224,11 @@ the simulations folder and produce figures in the ```simulations/img``` folder.
 
 **To reproduce the empirical illustration:**
 Execute ```FRED-MD_forecasting_v02.R ``` 
-(from the parent folder via ```setwd("../..")```) to conduct the forecasting exercise.
+(from the root directory via ```setwd("../..")```) to conduct the forecasting exercise.
 The script loads the pre-processed data from the ```application/FRED/data``` folder
 and automatically saves the workspace (if in Linux).
 Run ```FRED-MD_figures_v02.R``` to produce the figures in the empirical illustration
-in the ```application/FRED/img``` folder.
+in the ```application/FRED/img``` folder. -->
 
 ## Scope
 
