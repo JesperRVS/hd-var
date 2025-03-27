@@ -1,6 +1,7 @@
 # hd-var: Lasso and Related Tools for High-Dimensional Vector Autoregression
 
-Maintained by: Jesper Riis-Vestergaard Sørensen, University of Copenhagen
+By: Jesper Riis-Vestergaard Sørensen, University of Copenhagen,
+Department of Economics.
 
 ---
 
@@ -19,10 +20,20 @@ Maintained by: Jesper Riis-Vestergaard Sørensen, University of Copenhagen
 
 ## Overview
 
-This repository contains an `R` implementation of (weighted) Lasso and its variations [such as least squares refitting following Lasso selection (post-Lasso) and square-root Lasso (sqrt-Lasso)] with a data-driven and theoretically justifiable tuning parameter selection method designed for high-dimensional (HD) vector autoregression (VAR).
+This repository contains an `R` implementation of (weighted) Lasso and its
+variations [such as least squares refitting following Lasso selection
+(post-Lasso) and square-root Lasso (sqrt-Lasso)] with a data-driven and
+theoretically justifiable tuning parameter selection method designed for
+high-dimensional (HD) vector autoregression (VAR).
 
 The code in this repository was developed for and used in the paper:
-"***Data-Driven Tuning Parameter Selection for High-Dimensional Vector Autoregressions***," authored by [Anders Bredahl Kock](https://sites.google.com/site/andersbkock/), [Rasmus Søndergaard Pedersen](https://sites.google.com/site/rspecon/), and [Jesper Riis-Vestergaard Sørensen](https://sites.google.com/site/jesperrvs) (henceforth: KPS), available at [arXiv:2403.06657](https://arxiv.org/abs/2403.06657). See the paper for the theoretical justification of the method.
+"***Data-Driven Tuning Parameter Selection for High-Dimensional Vector
+Autoregressions***," authored by [Anders Bredahl
+Kock](https://sites.google.com/site/andersbkock/), [Rasmus Søndergaard
+Pedersen](https://sites.google.com/site/rspecon/), and [Jesper Riis-Vestergaard
+Sørensen](https://sites.google.com/site/jesperrvs) (henceforth: KPS), available
+at [arXiv:2403.06657](https://arxiv.org/abs/2403.06657). See the paper for the
+theoretical justification of the method.
 
 ---
 
@@ -30,8 +41,9 @@ The code in this repository was developed for and used in the paper:
 
 To run the scripts in this repository, you will need the following:
 
-- **R**: Version 4.0 or higher. Key R Packages: `glmnet` and `ggplot2`.
-- **Matlab**: Required only for pre-processing the FRED-MD dataset (optional).
+- **R**: Version 4.2 or higher. Key R Packages: `glmnet` and `ggplot2`.
+- **Matlab**: Required only for pre-processing the FRED-MD dataset. (Optional,
+  since the pre-processed dataset is also included.)
 
 ---
 
@@ -39,20 +51,29 @@ To run the scripts in this repository, you will need the following:
 
 The repository is organized as follows:
 
-- **Root Directory**: Contains the main scripts and auxiliary functions for fitting VAR models using Lasso and its variations.
-- **Simulations Subfolder**: Contains scripts and data for running simulations and generating figures for the main paper
-and its supplementary appendices.
-- **Application/FRED Subfolder**: Contains scripts and data for the empirical illustration using the FRED-MD dataset.
+- **Root Directory**: Contains the main scripts and auxiliary functions for
+  fitting VAR models using Lasso and its variations.
+- **Simulations Subfolder**: Contains scripts and data for running simulations
+and generating figures for the main paper and its supplementary appendices.
+- **Application/FRED Subfolder**: Contains scripts and data for the empirical
+  illustration using the FRED-MD dataset.
 
 ---
 
 ## File Descriptions
 
 ### Root Directory
-- `lassoVAR.R`: Fits a VAR using (weighted) Lasso with optional refitting (post-Lasso) using the KPS tuning parameter selection method.
-- `sqrtLassoVAR.R`: Fits a VAR using (weighted) square-root Lasso using the KPS tuning parameter selection method.
-- `icLassoVAR.R`: Fits a VAR using Lasso with an information criterion (Akaike, Bayes, or Hannan-Quinn) to determine the penalty level.
-- `helper_functions.R`: Contains helper functions for data unpacking, least squares fitting, and Lasso application.
+- `lassoVAR.R`: Contains the function `lasso_var` which fits a VAR using
+  (weighted) Lasso with optional refitting (post-Lasso) using the KPS tuning
+  parameter selection method.
+- `sqrtLassoVAR.R`: Contains the function `sqrt_lasso_var` which fits a VAR
+  using (weighted) square-root Lasso using the KPS tuning parameter selection
+  method.
+- `icLassoVAR.R`: Contains the function `ic_lasso_var` which fits a VAR using
+  Lasso with an information criterion (Akaike, Bayes, or Hannan-Quinn) to
+  determine the penalty level.
+- `helper_functions.R`: Contains several helper functions for data unpacking,
+  least squares fitting, and Lasso application.
 
 ### Simulations Subfolder
 - `simData.R`: Functions for simulating data based on designs in Section 6 of the paper.
@@ -64,6 +85,7 @@ and its supplementary appendices.
 - `markupDependenceFigs_v02.R`: Produces Figure H.2 (raw average estimation errors).
 
 ### Application/FRED Subfolder
+- `FRED-MD_2022-05.csv`: The raw FRED-MD dataset (from May, 2022).
 - `FREDMD_preprocess.m`: Pre-processes the raw FRED-MD dataset.
 - `prepare_missing.m`: Handles missing data in the FRED-MD dataset.
 - `remove_outliers.m`: Removes outliers from the FRED-MD dataset.
@@ -92,7 +114,8 @@ and its supplementary appendices.
 2. **Conduct the forecasting exercise**:
    - Execute `FRED-MD_forecasting_v02.R`. (Execute from the root directory. Use `setwd("../..")` to back up, if necessary.)
    - The script will load the pre-processed data from `application/FRED/data` and save the workspace automatically (if in Linux).
-3. **Generate figures**: Run `FRED-MD_figures_v02.R` to produce both parts of Figure 7.1.
+3. **Generate figures**:
+   - Run `FRED-MD_figures_v02.R` to produce both parts of Figure 7.1.
 
 ---
 
@@ -111,6 +134,8 @@ The following figures are reproduced by the scripts in this repository:
 
 If you use this repository, please cite:
 
-- Kock, A. B., Pedersen, R. S., & Sørensen, J. R.-V. (2024). "Data-Driven Tuning Parameter Selection for High-Dimensional Vector Autoregressions." [arXiv:2403.06657](https://arxiv.org/abs/2403.06657).
+- Kock, A. B., Pedersen, R. S., & Sørensen, J. R.-V. (2024). "Data-Driven Tuning
+  Parameter Selection for High-Dimensional Vector Autoregressions."
+  [arXiv:2403.06657](https://arxiv.org/abs/2403.06657).
 
 ---
