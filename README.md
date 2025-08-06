@@ -26,14 +26,13 @@ variations [such as least squares refitting following Lasso selection
 theoretically justifiable tuning parameter selection method designed for
 high-dimensional (HD) vector autoregression (VAR).
 
-The code in this repository was developed for and used in the paper:
-"***Data-Driven Tuning Parameter Selection for High-Dimensional Vector
-Autoregressions***," authored by [Anders Bredahl
-Kock](https://sites.google.com/site/andersbkock/), [Rasmus Søndergaard
-Pedersen](https://sites.google.com/site/rspecon/), and [Jesper Riis-Vestergaard
-Sørensen](https://sites.google.com/site/jesperrvs) (henceforth: KPS), available
-at [arXiv:2403.06657](https://arxiv.org/abs/2403.06657). See the paper for the
-theoretical justification of the method.
+The code in this repository was developed for and used in the
+[[Paper]](https://doi.org/10.1080/01621459.2025.2516190): "***Data-Driven Tuning
+Parameter Selection for High-Dimensional Vector Autoregressions***," authored by
+[Anders Bredahl Kock](https://sites.google.com/site/andersbkock/), [Rasmus
+Søndergaard Pedersen](https://sites.google.com/site/rspecon/), and [Jesper
+Riis-Vestergaard Sørensen](https://sites.google.com/site/jesperrvs) (henceforth:
+KPS). See the paper for the theoretical justification of the method.
 
 ---
 
