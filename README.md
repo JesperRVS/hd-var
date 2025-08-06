@@ -134,8 +134,9 @@ The following figures are reproduced by the scripts in this repository:
 
 If you use this repository, please cite:
 
-- Kock, A. B., Pedersen, R. S., & Sørensen, J. R.-V. (2024). "Data-Driven Tuning
-  Parameter Selection for High-Dimensional Vector Autoregressions."
-  [arXiv:2403.06657](https://arxiv.org/abs/2403.06657).
+- Kock, A. B., Pedersen, R. S., & Sørensen, J. R.-V. (forthcoming), "Data-Driven
+  Tuning Parameter Selection for High-Dimensional Vector Autoregressions,"
+  *Journal of the American Statistical Association*.
+  [[Paper]](https://doi.org/10.1080/01621459.2025.2516190).
 
 ---
